@@ -89,17 +89,23 @@ ggplot(zwalks.agg, aes(x=factor(weekday, level=weekday_order), "Dienstag" , y=pe
 #############################################################################
 # ANALYZIS
 #############################################################################
-# chronic of lockdowns https://www.stv-fst.ch/de/chronik-coronavirus
+### define lockdown period
+### chronic of lockdowns https://www.stv-fst.ch/de/chronik-coronavirus
 lockdown.1 <- seq(as.Date("2020/03/16"), by = "day", length.out = 57)
 lockdown.2 <- seq(as.Date("2020/12/22"), by = "day", length.out = 10)
 
-
+### add lockdown flag to dataset zwalks.agg
 zwalks.agg$lockdown <- FALSE
+zwalks.agg$lockdown01 <- 0
+
 zwalks.agg[zwalks.agg$date %in% lockdown.1 , ]$lockdown <- TRUE
+zwalks.agg[zwalks.agg$date %in% lockdown.1 , ]$lockdown01 <- 1
+
 zwalks.agg[zwalks.agg$date %in% lockdown.2 , ]$lockdown <- TRUE
+zwalks.agg[zwalks.agg$date %in% lockdown.1 , ]$lockdown01 <- 1
 
 
-###
+###  Boxplot 
 ggplot(mapping = aes(y = zwalks.agg$person_all,
                      x = zwalks.agg$lockdown)) +
   geom_boxplot() +
@@ -107,3 +113,20 @@ ggplot(mapping = aes(y = zwalks.agg$person_all,
   ylab("person_all") +
   xlab("lockdown")
 
+
+### Logistic regression
+
+zwalks.agg.glm <- glm(lockdown ~  person_all, family = "binomial", 
+                      data = zwalks.agg)
+
+summary(zwalks.agg.glm)
+
+
+### Plot the Logistic regression
+ggplot(data = zwalks.agg,
+       mapping = aes(y = lockdown01,
+                     x = person_all)) + 
+  geom_point() +
+  geom_smooth(method = "glm", 
+              se = FALSE,
+              method.args = list(family = "binomial")) 
