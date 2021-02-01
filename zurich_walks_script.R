@@ -85,3 +85,25 @@ ggplot(zwalks.agg, aes(x=factor(weekday, level=weekday_order), "Dienstag" , y=pe
   xlab("2020") +
   ylab("Pedestrians and Bicycles")
 
+
+#############################################################################
+# ANALYZIS
+#############################################################################
+# chronic of lockdowns https://www.stv-fst.ch/de/chronik-coronavirus
+lockdown.1 <- seq(as.Date("2020/03/16"), by = "day", length.out = 57)
+lockdown.2 <- seq(as.Date("2020/12/22"), by = "day", length.out = 10)
+
+
+zwalks.agg$lockdown <- FALSE
+zwalks.agg[zwalks.agg$date %in% lockdown.1 , ]$lockdown <- TRUE
+zwalks.agg[zwalks.agg$date %in% lockdown.2 , ]$lockdown <- TRUE
+
+
+###
+ggplot(mapping = aes(y = zwalks.agg$person_all,
+                     x = zwalks.agg$lockdown)) +
+  geom_boxplot() +
+  geom_hline(yintercept = 0) +
+  ylab("person_all") +
+  xlab("lockdown")
+
