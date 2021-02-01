@@ -115,10 +115,8 @@ ggplot(mapping = aes(y = zwalks.agg$person_all,
 
 
 ### Logistic regression
-
 zwalks.agg.glm <- glm(lockdown ~  person_all, family = "binomial", 
                       data = zwalks.agg)
-
 summary(zwalks.agg.glm)
 
 
