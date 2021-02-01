@@ -1,6 +1,6 @@
 ---
 title: "zurich_walks"
-author: "Patrice.Robin"
+author: "Patrice.Robin, Patrik.Widmer"
 date: "1 2 2021"
 output: pdf_document
 ---
