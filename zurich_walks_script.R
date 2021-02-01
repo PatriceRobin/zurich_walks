@@ -39,7 +39,7 @@ zwalks.day['person_all'] <-
 
 zwalks.day$month <- format(zwalks.day$date, "%Y-%m")
 zwalks.day$weekday <- weekdays(zwalks.day$date)
-
+weekday_order <- c( "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag","Samstag","Sonntag")
 
 #geographical data
 
@@ -73,7 +73,7 @@ ggplot(zwalks.agg, aes(x=date, y=person_all)) +
   ylab("Pedestrians and Bicycles") +
   scale_x_date(
     labels = date_format("%B"),
-    breaks = "1 month") +
+    breaks = "1 month") + 
   theme(axis.text.x = element_text(angle = 45))
 
 
@@ -84,8 +84,8 @@ ggplot(zwalks.agg, aes(x=month, y=person_all)) +
   ylab("Pedestrians and Bicycles")
 
 
-ggplot(zwalks.agg, aes(x=weekday, y=person_all)) +
-  stat_summary(fun = "sum", geom = "bar")+
+ggplot(zwalks.agg, aes(x=factor(weekday, level=weekday_order), "Dienstag" , y=person_all)) +
+  stat_summary(fun = "mean", geom = "bar")+
   ggtitle("Pedestrian and Bicycles in Zurich through 2020") +
   xlab("2020") +
   ylab("Pedestrians and Bicycles")
