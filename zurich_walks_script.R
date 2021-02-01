@@ -1,10 +1,10 @@
 #load packages
-if (!require(dplyr)) {
-  install.packages('dplyr')
-}
-if (!require(ggplot2)) {
-  install.packages('ggplot2')
-}
+if (!require(tidyverse)) {install.packages('"tidyverse"')}
+
+if (!require(ggplot2)) {install.packages('ggplot2')}
+
+
+if (!require(scales)) {install.packages('scales')}
 
 
 
@@ -37,6 +37,9 @@ zwalks.day['velo_all'] <- zwalks.day$velo_in + zwalks.day$velo_out
 zwalks.day['person_all'] <-
   zwalks.day$velo_all + zwalks.day$fuss_all
 
+zwalks.day$month <- format(zwalks.day$date, "%Y-%m")
+zwalks.day$weekday <- weekdays(zwalks.day$date)
+
 
 #geographical data
 
@@ -48,6 +51,41 @@ zwalks.day['person_all'] <-
 
 ggplot(zwalks.day, aes(x=date, y=person_all)) +
   geom_point(na.rm = TRUE, size = 0.75) +
+  ggtitle("Pedestrian and Bicycles in Zurich through 2020") +
+  xlab("2020") +
+  ylab("Pedestrians and Bicycles")
+
+
+
+# overall pedestrians and bicycles / daily
+zwalks.agg <-
+  aggregate(zwalks.day[c("person_all", "fuss_all", "velo_all")],
+            by = zwalks.day[c( "date", "month", "weekday")],
+            FUN = sum)
+
+
+
+#ggplot monthly 
+ggplot(zwalks.agg, aes(x=date, y=person_all)) +
+  geom_point(na.rm = TRUE, size = 0.75) +
+  ggtitle("Pedestrian and Bicycles in Zurich through 2020") +
+  xlab("2020") +
+  ylab("Pedestrians and Bicycles") +
+  scale_x_date(
+    labels = date_format("%B"),
+    breaks = "1 month") +
+  theme(axis.text.x = element_text(angle = 45))
+
+
+ggplot(zwalks.agg, aes(x=month, y=person_all)) +
+  stat_summary(fun = "sum", geom = "bar")+
+  ggtitle("Pedestrian and Bicycles in Zurich through 2020") +
+  xlab("2020") +
+  ylab("Pedestrians and Bicycles")
+
+
+ggplot(zwalks.agg, aes(x=weekday, y=person_all)) +
+  stat_summary(fun = "sum", geom = "bar")+
   ggtitle("Pedestrian and Bicycles in Zurich through 2020") +
   xlab("2020") +
   ylab("Pedestrians and Bicycles")
