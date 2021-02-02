@@ -4,6 +4,8 @@
 if (!require(tidyverse)) {install.packages('"tidyverse"')}
 if (!require(ggplot2)) {install.packages('ggplot2')}
 if (!require(scales)) {install.packages('scales')}
+if (!require(dplyr)) {install.packages('dplyr')}
+
 
 #Sys.setlocale("LC_TIME", "English")
 
@@ -93,6 +95,13 @@ ggplot(zwalks.agg, aes(x=factor(weekday, level=weekday_order), y=people_all)) +
   xlab("Weekday") +
   ylab("Pedestrians and Bicycles")
 
+# COVID Cases
+p <- ggplot(covid, aes(x=date, y=new_cases_smoothed)) +
+  geom_line() + 
+  ggtitle("New COVID Cases (smoothed)") +
+  ylab("COVID Cases") + 
+  xlab("Date")
+p
 
 #############################################################################
 # ANALYZIS
