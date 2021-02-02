@@ -4,14 +4,11 @@
 if (!require(tidyverse)) {install.packages('"tidyverse"')}
 if (!require(ggplot2)) {install.packages('ggplot2')}
 if (!require(scales)) {install.packages('scales')}
-<<<<<<< HEAD
 if (!require(rgdal)) {install.packages('rgdal')}
 if (!require(sf)) {install.packages('sf')}
 if (!require(rasterVis)) {install.packages('rasterVis')}
-=======
 if (!require(dplyr)) {install.packages('dplyr')}
 
->>>>>>> 2f1e4a22967ea225c7e490f1d3f43581eb91d2b3
 
 #Sys.setlocale("LC_TIME", "English")
 
@@ -182,34 +179,44 @@ ggplot(mapping = aes(y = zwalks.day$people_all,
 
 
 #load Stadtkreise
-z.kreis <- st_read("./Stadtkreise/stzh.adm_stadtkreise_v.shp")
-head(z.kreis)
-summary(z.kreis)
+zkreis <- st_read("./Stadtkreise/stzh.adm_stadtkreise_v.shp")
+head(zkreis)
+summary(zkreis)
 
 
 #load countingstations
-z.station <- st_read("./Countingstation/taz.view_eco_standorte.shp")
-head(z.station)
+zstation <- st_read("./Countingstation/taz.view_eco_standorte.shp")
+head(zstation)
 
-z.station <- cbind(z.station, st_coordinates(z.station))
+zstation <- cbind(zstation, st_coordinates(zstation))
 
-summary(z.station)
+summary(zstation)
 
 
 #plot Stadtkreise and Coutingstations
-p.kreis <- ggplot(z.kreis) +
+plot.kreis <- ggplot(zkreis) +
   geom_sf(size = 1, color = "black", fill="lightblue") +
   geom_sf_text(aes(label = knr), colour = "black")
 
 
-p.station <- p.kreis + geom_point(data = z.station, aes(x=X, y=Y), size = 3, 
+plot.station <- plot.kreis + geom_point(data = zstation, aes(x=X, y=Y), size = 3, 
                                   shape = 23, fill = "darkred")
-p.station
+plot.station
 
 
 #join the shape files - left on station
-z.join <- st_join(z.station, z.kreis, 
+zstation.kreis <- st_join(zstation, zkreis, 
                   join = st_within)
 
-head(z.join)
+head(zstation.kreis)
+
+#############################################################################
+# MEASUREMENTS and LOCATION
+#############################################################################
+
+zwalks.day.knr <- zwalks.day %>% left_join (select(zstation.kreis,
+                                                fk_zaehler,
+                                                knr,
+                                                kname),
+                         by = "fk_zaehler")
 
