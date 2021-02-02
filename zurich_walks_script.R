@@ -130,6 +130,13 @@ ggplot(mapping = aes(y = zwalks.agg$people_all,
   ylab("people_all") +
   xlab("lockdown")
 
+###  Plot People vs Cases 
+plot(y = zwalks.agg$people_all, 
+     x = zwalks.agg$new_cases_smoothed,
+     main = " ",
+     xlab = "new_cases_smoothed",
+     ylab = "people_all" )
+
 
 ### Logistic regression
 zwalks.agg.glm <- glm(lockdown ~  people_all, family = "binomial", 
@@ -145,3 +152,6 @@ ggplot(data = zwalks.agg,
   geom_smooth(method = "glm", 
               se = FALSE,
               method.args = list(family = "binomial")) 
+
+
+
