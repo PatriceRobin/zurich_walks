@@ -11,6 +11,10 @@ if (!require(scales)) {install.packages('scales')}
 #load data & prepare it
 #############################################################################
 
+#source : https://ourworldindata.org/coronavirus/country/switzerland?country=~CHE
+covid <- read.csv("covid-data.csv", encoding="UTF-8")
+covid$date <- as.Date(covid$date,format = "%d.%m.%y")
+
 zwalks = read.csv("2020_verkehrszaehlungen_werte_fussgaenger_velo.csv")
 
 #extract date from datetime
@@ -53,6 +57,9 @@ zwalks.agg <-
   aggregate(zwalks.day[c("people_all", "fuss_all", "velo_all")],
             by = zwalks.day[c( "date", "month", "weekday", "week")],
             FUN = sum)
+
+# merge zwalks.agg with covid data
+zwalks.agg <- (merge(covid, zwalks.agg, by = 'date'))
 
 
 #############################################################################
