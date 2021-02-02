@@ -4,15 +4,24 @@
 if (!require(tidyverse)) {install.packages('"tidyverse"')}
 if (!require(ggplot2)) {install.packages('ggplot2')}
 if (!require(scales)) {install.packages('scales')}
+<<<<<<< HEAD
 if (!require(rgdal)) {install.packages('rgdal')}
 if (!require(sf)) {install.packages('sf')}
 if (!require(rasterVis)) {install.packages('rasterVis')}
+=======
+if (!require(dplyr)) {install.packages('dplyr')}
+
+>>>>>>> 2f1e4a22967ea225c7e490f1d3f43581eb91d2b3
 
 #Sys.setlocale("LC_TIME", "English")
 
 #############################################################################
 #load data & prepare it
 #############################################################################
+
+#source : https://ourworldindata.org/coronavirus/country/switzerland?country=~CHE
+covid <- read.csv("covid-data.csv", encoding="UTF-8")
+covid$date <- as.Date(covid$date,format = "%d.%m.%y")
 
 zwalks = read.csv("2020_verkehrszaehlungen_werte_fussgaenger_velo.csv")
 
@@ -57,6 +66,9 @@ zwalks.agg <-
             by = zwalks.day[c( "date", "month", "weekday", "week")],
             FUN = sum)
 
+# merge zwalks.agg with covid data
+zwalks.agg <- (merge(covid, zwalks.agg, by = 'date'))
+
 
 #############################################################################
 # Look at the data
@@ -95,6 +107,13 @@ ggplot(zwalks.agg, aes(x=factor(weekday, level=weekday_order), y=people_all)) +
   xlab("Weekday") +
   ylab("Pedestrians and Bicycles")
 
+# COVID Cases
+p <- ggplot(covid, aes(x=date, y=new_cases_smoothed)) +
+  geom_line() + 
+  ggtitle("New COVID Cases (smoothed)") +
+  ylab("COVID Cases") + 
+  xlab("Date")
+p
 
 #############################################################################
 # ANALYZIS
@@ -122,6 +141,13 @@ ggplot(mapping = aes(y = zwalks.agg$people_all,
   geom_hline(yintercept = 0) +
   ylab("people_all") +
   xlab("lockdown")
+
+###  Plot People vs Cases 
+plot(y = zwalks.agg$people_all, 
+     x = zwalks.agg$new_cases_smoothed,
+     main = " ",
+     xlab = "new_cases_smoothed",
+     ylab = "people_all" )
 
 
 ### Logistic regression
@@ -186,3 +212,4 @@ z.join <- st_join(z.station, z.kreis,
                   join = st_within)
 
 head(z.join)
+
