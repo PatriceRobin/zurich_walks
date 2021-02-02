@@ -4,6 +4,9 @@
 if (!require(tidyverse)) {install.packages('"tidyverse"')}
 if (!require(ggplot2)) {install.packages('ggplot2')}
 if (!require(scales)) {install.packages('scales')}
+if (!require(rgdal)) {install.packages('rgdal')}
+if (!require(sf)) {install.packages('sf')}
+if (!require(rasterVis)) {install.packages('rasterVis')}
 
 #Sys.setlocale("LC_TIME", "English")
 
@@ -54,6 +57,12 @@ zwalks.agg <-
             by = zwalks.day[c( "date", "month", "weekday", "week")],
             FUN = sum)
 
+
+#############################################################################
+# Look at the data
+#############################################################################
+#Look 
+sapply(zwalks, n_distinct)
 
 #############################################################################
 # PLOTS
@@ -129,3 +138,51 @@ ggplot(data = zwalks.agg,
   geom_smooth(method = "glm", 
               se = FALSE,
               method.args = list(family = "binomial")) 
+
+
+#############################################################################
+# LOCATION
+#############################################################################
+
+
+###  Boxplot per location
+ggplot(mapping = aes(y = zwalks.day$people_all,
+                    group = zwalks.day$fk_standort)) +
+  geom_boxplot() +
+  geom_hline(yintercept = 0) +
+  ylab("people_all") +
+  xlab("locations")
+
+
+
+#load Stadtkreise
+z.kreis <- st_read("./Stadtkreise/stzh.adm_stadtkreise_v.shp")
+head(z.kreis)
+summary(z.kreis)
+
+
+#load countingstations
+z.station <- st_read("./Countingstation/taz.view_eco_standorte.shp")
+head(z.station)
+
+z.station <- cbind(z.station, st_coordinates(z.station))
+
+summary(z.station)
+
+
+#plot Stadtkreise and Coutingstations
+p.kreis <- ggplot(z.kreis) +
+  geom_sf(size = 1, color = "black", fill="lightblue") +
+  geom_sf_text(aes(label = knr), colour = "black")
+
+
+p.station <- p.kreis + geom_point(data = z.station, aes(x=X, y=Y), size = 3, 
+                                  shape = 23, fill = "darkred")
+p.station
+
+
+#join the shape files - left on station
+z.join <- st_join(z.station, z.kreis, 
+                  join = st_within)
+
+head(z.join)
