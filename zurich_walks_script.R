@@ -2,12 +2,10 @@
 #load packages
 #############################################################################
 if (!require(tidyverse)) {install.packages('"tidyverse"')}
-
 if (!require(ggplot2)) {install.packages('ggplot2')}
-
-
 if (!require(scales)) {install.packages('scales')}
 
+#Sys.setlocale("LC_TIME", "English")
 
 #############################################################################
 #load data & prepare it
@@ -29,29 +27,30 @@ zwalks <- zwalks %>%
   rename(datetime = datum)
 
 
-#summarize data on a daily basis
-zwalks.day <-
-  aggregate(zwalks[c("velo_in", "velo_out", "fuss_in", "fuss_out")],
-            by = zwalks[c("fk_zaehler", "fk_standort", "date", "ost", "nord")],
-            FUN = sum)
-
 #summarize bicycles and pedestrians
-zwalks.day['fuss_all'] <- zwalks.day$fuss_in + zwalks.day$fuss_out
-zwalks.day['velo_all'] <- zwalks.day$velo_in + zwalks.day$velo_out
-zwalks.day['person_all'] <-
-  zwalks.day$velo_all + zwalks.day$fuss_all
+zwalks['fuss_all'] <- zwalks$fuss_in + zwalks$fuss_out
+zwalks['velo_all'] <- zwalks$velo_in + zwalks$velo_out
+zwalks['people_all'] <-
+  zwalks$velo_all + zwalks$fuss_all
 
 #add months and weekdays
-zwalks.day$month <- format(zwalks.day$date, "%Y-%m")
-zwalks.day$week <- format(zwalks.day$date, "%Y-%V")
-zwalks.day$weekday <- weekdays(zwalks.day$date)
+zwalks$month <- format(zwalks$date, "%B")
+zwalks$week <- format(zwalks$date, "%Y-%V")
+zwalks$weekday <- weekdays(zwalks$date)
 
-weekday_order <- c( "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag","Samstag","Sonntag")
+
+#summarize data on a daily basis
+zwalks.day <-
+  aggregate(zwalks[c("velo_in", "velo_out", "velo_all", "fuss_in", "fuss_out", "fuss_all", "people_all")],
+            by = zwalks[c("fk_zaehler", "fk_standort", "date", "month", "week", "weekday", "ost", "nord")],
+            FUN = sum)
+
+weekday_order <- c( "Monday", "Tuesday", "Wednesday", "Thursday", "Friday","Saturday","Sunday")
 
 
 # overall pedestrians and bicycles
 zwalks.agg <-
-  aggregate(zwalks.day[c("person_all", "fuss_all", "velo_all")],
+  aggregate(zwalks.day[c("people_all", "fuss_all", "velo_all")],
             by = zwalks.day[c( "date", "month", "weekday", "week")],
             FUN = sum)
 
@@ -60,8 +59,8 @@ zwalks.agg <-
 # PLOTS
 #############################################################################
 
-#ggplot monthly 
-ggplot(zwalks.agg, aes(x=date, y=person_all)) +
+#Aggregated Data - Daily 2020
+ggplot(zwalks.agg, aes(x=date, y=people_all)) +
   geom_point(na.rm = TRUE, size = 0.75) +
   ggtitle("Pedestrian and Bicycles in Zurich through 2020") +
   xlab("2020") +
@@ -72,17 +71,19 @@ ggplot(zwalks.agg, aes(x=date, y=person_all)) +
   theme(axis.text.x = element_text(angle = 45))
 
 
-ggplot(zwalks.agg, aes(x=month, y=person_all)) +
+#Months
+ggplot(zwalks.agg, aes(x=factor(month, level=month.name), y=people_all)) +
   stat_summary(fun = "sum", geom = "bar")+
   ggtitle("Pedestrian and Bicycles in Zurich through 2020") +
-  xlab("2020") +
+  xlab("Month") +
   ylab("Pedestrians and Bicycles")
 
 
-ggplot(zwalks.agg, aes(x=factor(weekday, level=weekday_order), "Dienstag" , y=person_all)) +
+#Weekdays
+ggplot(zwalks.agg, aes(x=factor(weekday, level=weekday_order), y=people_all)) +
   stat_summary(fun = "mean", geom = "bar")+
   ggtitle("Pedestrian and Bicycles in Zurich through 2020") +
-  xlab("2020") +
+  xlab("Weekday") +
   ylab("Pedestrians and Bicycles")
 
 
@@ -106,16 +107,16 @@ zwalks.agg[zwalks.agg$date %in% lockdown.1 , ]$lockdown01 <- 1
 
 
 ###  Boxplot 
-ggplot(mapping = aes(y = zwalks.agg$person_all,
+ggplot(mapping = aes(y = zwalks.agg$people_all,
                      x = zwalks.agg$lockdown)) +
   geom_boxplot() +
   geom_hline(yintercept = 0) +
-  ylab("person_all") +
+  ylab("people_all") +
   xlab("lockdown")
 
 
 ### Logistic regression
-zwalks.agg.glm <- glm(lockdown ~  person_all, family = "binomial", 
+zwalks.agg.glm <- glm(lockdown ~  people_all, family = "binomial", 
                       data = zwalks.agg)
 summary(zwalks.agg.glm)
 
@@ -123,7 +124,7 @@ summary(zwalks.agg.glm)
 ### Plot the Logistic regression
 ggplot(data = zwalks.agg,
        mapping = aes(y = lockdown01,
-                     x = person_all)) + 
+                     x = people_all)) + 
   geom_point() +
   geom_smooth(method = "glm", 
               se = FALSE,
