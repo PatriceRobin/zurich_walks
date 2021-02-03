@@ -20,7 +20,12 @@ if (!require(dplyr)) {install.packages('dplyr')}
 covid <- read.csv("covid-data.csv", encoding="UTF-8")
 covid$date <- as.Date(covid$date,format = "%d.%m.%y")
 
-zwalks = read.csv("2020_verkehrszaehlungen_werte_fussgaenger_velo.csv")
+
+#source: https://data.stadt-zuerich.ch/dataset/ted_taz_verkehrszaehlungen_werte_fussgaenger_velo
+zwalks2020 <- read.csv("2020_verkehrszaehlungen_werte_fussgaenger_velo.csv")
+zwalks2019 <- read.csv("2019_verkehrszaehlungen_werte_fussgaenger_velo.csv")
+
+zwalks <- dplyr::union(zwalks2020, zwalks2019)
 
 #extract date from datetime
 zwalks['date'] <- as.Date(zwalks$DATUM)
@@ -43,6 +48,7 @@ zwalks['people_all'] <-
   zwalks$velo_all + zwalks$fuss_all
 
 #add months and weekdays
+zwalks$year <- format(zwalks$date, "%Y")
 zwalks$month <- format(zwalks$date, "%B")
 zwalks$week <- format(zwalks$date, "%Y-%V")
 zwalks$weekday <- weekdays(zwalks$date)
@@ -51,7 +57,7 @@ zwalks$weekday <- weekdays(zwalks$date)
 #summarize data on a daily basis
 zwalks.day <-
   aggregate(zwalks[c("velo_in", "velo_out", "velo_all", "fuss_in", "fuss_out", "fuss_all", "people_all")],
-            by = zwalks[c("fk_zaehler", "fk_standort", "date", "month", "week", "weekday", "ost", "nord")],
+            by = zwalks[c("fk_zaehler", "fk_standort", "date", "year", "month", "week", "weekday", "ost", "nord")],
             FUN = sum)
 
 weekday_order <- c( "Monday", "Tuesday", "Wednesday", "Thursday", "Friday","Saturday","Sunday")
@@ -60,11 +66,18 @@ weekday_order <- c( "Monday", "Tuesday", "Wednesday", "Thursday", "Friday","Satu
 # overall pedestrians and bicycles
 zwalks.agg <-
   aggregate(zwalks.day[c("people_all", "fuss_all", "velo_all")],
-            by = zwalks.day[c( "date", "month", "weekday", "week")],
+            by = zwalks.day[c( "date", "month", "weekday", "week","year")],
             FUN = sum)
 
 # merge zwalks.agg with covid data
 zwalks.agg <- (merge(covid, zwalks.agg, by = 'date'))
+
+
+zwalks.agg2 <- zwalks.day %>%
+  group_by(fk_zaehler, year) %>%
+  summarize(people_all)
+
+zwalks.agg2
 
 
 #############################################################################
@@ -86,7 +99,8 @@ ggplot(zwalks.agg, aes(x=date, y=people_all)) +
   scale_x_date(
     labels = date_format("%B"),
     breaks = "1 month") + 
-  theme(axis.text.x = element_text(angle = 45))
+  theme(axis.text.x = element_text(angle = 45)) +
+  geom_point(aes(colour = factor(year)), size = 4)
 
 
 #Months
@@ -179,12 +193,15 @@ ggplot(mapping = aes(y = zwalks.day$people_all,
 
 
 #load Stadtkreise
+#source https://data.stadt-zuerich.ch/dataset/geo_stadtkreise
 zkreis <- st_read("./Stadtkreise/stzh.adm_stadtkreise_v.shp")
 head(zkreis)
 summary(zkreis)
 
 
 #load countingstations
+#source https://data.stadt-zuerich.ch/dataset/geo_standorte_der_automatischen_fuss__und_velozaehlungen
+
 zstation <- st_read("./Countingstation/taz.view_eco_standorte.shp")
 head(zstation)
 
@@ -195,12 +212,14 @@ summary(zstation)
 
 
 #Districts
+#source: https://data.stadt-zuerich.ch/dataset/ktzh_quartieranalyse
 zdistricts <- st_read("./Quartieranalyse/QUARTIERE_F.shp")
 summary(zdistricts)
 
 
 
 #Bauzonen
+#sources https://data.stadt-zuerich.ch/dataset/geo_nutzungsplanung___kommunale_bau__und_zonenordnung__bzo__jahresendstand_2020
 zzones <- st_read("./Bauzonen/afs.bzo_zone_v.shp")
 summary(zzones)
 
