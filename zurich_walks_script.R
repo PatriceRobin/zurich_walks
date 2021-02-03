@@ -194,22 +194,27 @@ summary(zstation)
 
 
 
+#Districts
+zdistricts <- st_read("./Quartieranalyse/QUARTIERE_F.shp")
+summary(zdistricts)
+
+
+
 #Bauzonen
 zzones <- st_read("./Bauzonen/afs.bzo_zone_v.shp")
-
 summary(zzones)
 
 
 #plot Stadtkreise and Coutingstations
 plot.map <- ggplot()+
-  geom_sf(data = zzones, size = 0.25, color = "blue", fill="lightblue")
-
+  geom_sf(data = zkreis, size = 0, color = "black", fill="lightblue")+
+  geom_sf(data = zzones, size = 0.25, color = "darkgrey", fill="white")
 
 plot.kreis <- plot.map +
-    geom_sf(data = zkreis, size = 1, color = "black", fill=NA)+
-    geom_sf_text(data = zkreis, aes(label = knr), colour = "black", size=12)
+    geom_sf(data = zkreis, size = 1, color = "black", fill= NA )+
+    geom_sf_text(data = zkreis, aes(label = knr), colour = "black", size=10)
   
-  
+#counting stations  
 plot.station <- plot.kreis + geom_point(data = zstation, aes(x=X, y=Y), size = 3, 
                                     shape = 23, fill = "red")
   
@@ -220,7 +225,34 @@ plot.station
 zstation.kreis <- st_join(zstation, zkreis, 
                   join = st_within)
 
-head(zstation.kreis)
+
+## Bauzonen
+zstation.zones <- st_join(zstation.kreis, zzones,
+                          join = st_within)
+
+head(zstation.zones)
+summary(zstation.zones)
+unique((zstation.zones$typ))
+
+
+
+zstation.zones["zones"] <- zstation.zones$typ
+
+zstation.zones$zones[zstation.zones$zones == "W4"] <- "Living" #Viergeschossige  Wohnzone
+zstation.zones$zones[zstation.zones$zones == "W5"] <- "Living" #Fünfgeschossige Wohnzone
+zstation.zones$zones[zstation.zones$zones == "Z6"] <- "Center" #Sechsgeschossige Zentrumszone
+zstation.zones$zones[zstation.zones$zones == "Z5"] <- "Center" #Fünfgeschossige Zentrumszone
+zstation.zones$zones[zstation.zones$zones == "K"] <- "Center" #Kernzone
+zstation.zones$zones[zstation.zones$zones == "F"] <- "Empty" #Freihaltezone
+zstation.zones$zones[zstation.zones$zones == "FP"] <- "Empty" #Parking
+zstation.zones$zones[zstation.zones$zones == "WLD"] <- "Recreation" #Wald
+zstation.zones$zones[zstation.zones$zones == "QI"] <- "Recreation" #Quartier Erhaltungszone
+zstation.zones$zones[zstation.zones$zones == "GWS"] <- "Recreation" #Gewässer
+zstation.zones$zones[zstation.zones$zones == "IG I"] <- "Industry" #Industrie
+
+
+
+
 
 
 
@@ -228,9 +260,9 @@ head(zstation.kreis)
 # MEASUREMENTS and LOCATION
 #############################################################################
 
-zwalks.day.knr <- zwalks.day %>% left_join (dplyr::select(zstation.kreis,
+zwalks.day.knr <- zwalks.day %>% left_join (dplyr::select(zstation.zones,
                                                 fk_zaehler,
                                                 knr,
-                                                kname),
-                         by = "fk_zaehler")
-
+                                                kname,
+                                                zones),
+                                            by = "fk_zaehler")

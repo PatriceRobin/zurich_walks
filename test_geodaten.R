@@ -9,9 +9,8 @@ zzones <- st_read("./Quartieranalyse/QUARTIERE_F.shp")
 
 summary(zzones)
 
-plot(zzones)
 
 ggplot() + 
   geom_sf(data = zzones, size = 0.5, color = "black", fill = NA) + 
-  ggtitle("Arbeitszonen") + 
+  ggtitle("Quartiere") + 
   coord_sf()
