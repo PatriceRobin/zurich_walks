@@ -8,9 +8,11 @@ if (!require(rgdal)) {install.packages('rgdal')}
 if (!require(sf)) {install.packages('sf')}
 if (!require(rasterVis)) {install.packages('rasterVis')}
 if (!require(dplyr)) {install.packages('dplyr')}
+if (!require(av)) {install.packages('av')}
+if (!require(ggpubr)) {install.packages('ggpubr')}
 
 
-#Sys.setlocale("LC_TIME", "English")
+Sys.setlocale("LC_TIME", "English")
 
 #############################################################################
 #load data & prepare it
@@ -69,16 +71,21 @@ zwalks.agg <-
             by = zwalks.day[c( "date", "month", "weekday", "week","year")],
             FUN = sum)
 
-# merge zwalks.agg with covid data
-zwalks.agg <- (merge(covid, zwalks.agg, by = 'date'))
+# left join zwalks agg and covid on date
+zwalks.covid <- zwalks.agg %>% left_join(dplyr::select(covid,
+                                                       date,
+                                                       new_cases_smoothed),
+                                         by = "date")
 
 
-zwalks.agg2 <- zwalks.day %>%
-  group_by(fk_zaehler, year) %>%
-  summarize(people_all)
 
-zwalks.agg2
 
+zwalks.agg.month <-
+  aggregate(zwalks.day[c("people_all", "fuss_all", "velo_all")],
+            by = zwalks.day[c( "year", "month")],
+            FUN = sum)
+
+summary(zwalks.agg.month)
 
 #############################################################################
 # Look at the data
@@ -90,17 +97,43 @@ sapply(zwalks, n_distinct)
 # PLOTS
 #############################################################################
 
-#Aggregated Data - Daily 2020
+#Aggregated Data - Daily 2019/2020
 ggplot(zwalks.agg, aes(x=date, y=people_all)) +
   geom_point(na.rm = TRUE, size = 0.75) +
   ggtitle("Pedestrian and Bicycles in Zurich through 2020") +
-  xlab("2020") +
+  xlab("2019-2020") +
   ylab("Pedestrians and Bicycles") +
   scale_x_date(
     labels = date_format("%B"),
     breaks = "1 month") + 
   theme(axis.text.x = element_text(angle = 45)) +
   geom_point(aes(colour = factor(year)), size = 4)
+
+
+ggplot(zwalks.agg, aes(x=factor(month, level=month.name), y=people_all)) +
+  geom_point(na.rm = TRUE, size = 0.75) +
+  ggtitle("Pedestrian and Bicycles in Zurich through 2020") +
+  xlab("2019-2020") +
+  ylab("Pedestrians and Bicycles") +
+  theme(axis.text.x = element_text(angle = 45)) +
+  geom_point(aes(colour = factor(year)), size = 4)
+
+
+ggplot(zwalks.agg.month, aes(x=factor(month, level=month.name), y=people_all)) +
+  geom_line(na.rm = TRUE, size = 0.75) +
+  ggtitle("Pedestrian and Bicycles in Zurich through 2020") +
+  xlab("2019-2020") +
+  ylab("Pedestrians and Bicycles") +
+  theme(axis.text.x = element_text(angle = 45)) +
+  geom_point(aes(colour = factor(year)), size = 4)
+
+
+ggplot(zwalks.agg.month, aes(x=factor(month, level=month.name), y=people_all, group=year, colour=year))+
+  geom_line(size=2)+
+  ggtitle("Pedestrian and Bicycles in Zurich through 2020") +
+  xlab("2019-2020") +
+  ylab("Pedestrians and Bicycles") +
+  theme(axis.text.x = element_text(angle = 45))
 
 
 #Months
@@ -134,41 +167,41 @@ p
 lockdown.1 <- seq(as.Date("2020/03/16"), by = "day", length.out = 57)
 lockdown.2 <- seq(as.Date("2020/12/22"), by = "day", length.out = 10)
 
-### add lockdown flag to dataset zwalks.agg
-zwalks.agg$lockdown <- FALSE
-zwalks.agg$lockdown01 <- 0
+### add lockdown flag to dataset zwalks.covid
+zwalks.covid$lockdown <- FALSE
+zwalks.covid$lockdown01 <- 0
 
-zwalks.agg[zwalks.agg$date %in% lockdown.1 , ]$lockdown <- TRUE
-zwalks.agg[zwalks.agg$date %in% lockdown.1 , ]$lockdown01 <- 1
+zwalks.covid[zwalks.covid$date %in% lockdown.1 , ]$lockdown <- TRUE
+zwalks.covid[zwalks.covid$date %in% lockdown.1 , ]$lockdown01 <- 1
 
-zwalks.agg[zwalks.agg$date %in% lockdown.2 , ]$lockdown <- TRUE
-zwalks.agg[zwalks.agg$date %in% lockdown.1 , ]$lockdown01 <- 1
+zwalks.covid[zwalks.covid$date %in% lockdown.2 , ]$lockdown <- TRUE
+zwalks.covid[zwalks.covid$date %in% lockdown.1 , ]$lockdown01 <- 1
 
 
 ###  Boxplot 
-ggplot(mapping = aes(y = zwalks.agg$people_all,
-                     x = zwalks.agg$lockdown)) +
+ggplot(mapping = aes(y = zwalks.covid$people_all,
+                     x = zwalks.covid$lockdown)) +
   geom_boxplot() +
   geom_hline(yintercept = 0) +
   ylab("people_all") +
   xlab("lockdown")
 
 ###  Plot People vs Cases 
-plot(y = zwalks.agg$people_all, 
-     x = zwalks.agg$new_cases_smoothed,
+plot(y = zwalks.covid$people_all, 
+     x = zwalks.covid$new_cases_smoothed,
      main = " ",
      xlab = "new_cases_smoothed",
      ylab = "people_all" )
 
 
 ### Logistic regression
-zwalks.agg.glm <- glm(lockdown ~  people_all, family = "binomial", 
-                      data = zwalks.agg)
-summary(zwalks.agg.glm)
+zwalks.covid.glm <- glm(lockdown ~  people_all, family = "binomial", 
+                      data = zwalks.covid)
+summary(zwalks.covid.glm)
 
 
 ### Plot the Logistic regression
-ggplot(data = zwalks.agg,
+ggplot(data = zwalks.covid,
        mapping = aes(y = lockdown01,
                      x = people_all)) + 
   geom_point() +
@@ -540,4 +573,4 @@ for (i in 1:nrow(file_list)){
 file_list_sorted <- arrange(file_list, sort_index)
 
 
-av::av_encode_video(file_list_sorted$file_path, 'zwalks_animation.mp4', framerate = 3)
+av::av_encode_video(file_list_sorted$file_path, 'zwalks_animation.avi', framerate = 3)
