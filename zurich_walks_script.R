@@ -266,3 +266,259 @@ zwalks.day.knr <- zwalks.day %>% left_join (dplyr::select(zstation.zones,
                                                 kname,
                                                 zones),
                                             by = "fk_zaehler")
+
+
+
+
+
+#############################################################################
+# LOCATION animation
+#############################################################################
+
+
+
+# get kreis list
+zwalks.day.knr.per_kreis <-zwalks.day.knr[zwalks.day.knr$date == "2020-01-03" , ]
+kreis_list <-zwalks.day.knr.per_kreis %>%
+  group_by(zwalks.day.knr.per_kreis$knr) %>%
+  summarize(total_kreis = sum(people_all, na.rm = TRUE))
+kreis_list <- kreis_list[,1]
+kreis_list <- t(kreis_list)
+kreis_list
+
+kreis_list <- 1:12
+kreis_list
+
+## create a day range
+day_range <- seq(as.Date("2020/01/01"), by = "day", length.out = 120) #
+day_range
+
+## creating a data frame for the summary output
+zwalks.summary <- data.frame(day_range)
+colnames(zwalks.summary)[1] <- "day"
+
+## add each kreis to the summary
+for (i_kreis in 1:length(kreis_list)){ #ncol
+  zwalks.summary <- add_column(zwalks.summary, !!(toString(kreis_list[i_kreis])) := 0)
+}
+
+zwalks.summary
+zwalks.summary[i_day]
+
+for (i_day in 1:nrow(zwalks.summary)){
+  print(zwalks.summary$day[i_day])
+  zwalks.day.knr.per_kreis <-zwalks.day.knr[zwalks.day.knr$date == zwalks.summary$day[i_day] , ]
+  #zwalks.day.knr.per_kreis <-zwalks.day.knr[zwalks.day.knr$date == "2020-01-03" , ]
+  zwalks.day.knr.per_kreis
+  kreis_people_per_day <-(t(zwalks.summary_daykreis <-zwalks.day.knr.per_kreis %>%
+                              group_by(zwalks.day.knr.per_kreis$knr) %>%
+                              summarize(total_kreis = sum(people_all, na.rm = TRUE))))
+  print(kreis_people_per_day)
+  print(length(kreis_people_per_day))
+  
+  if (length(kreis_people_per_day) > 21) {
+    ### add empty data for kreis 7 & merge columns
+    kreis_people_per_day_dummy <- cbind(kreis_people_per_day[,1:6] , c(7,0), kreis_people_per_day[,7:11])
+    kreis_people_per_day <- kreis_people_per_day_dummy
+    kreis_people_per_day
+    
+    for (icol in 1:ncol(kreis_people_per_day)){
+      zwalks.summary[i_day,icol+1]= kreis_people_per_day[2,icol]
+    }
+    
+    zwalks.summary
+    
+  } else {
+    print("missing values for day:")
+    print(zwalks.summary$day[i_day])
+  }
+  
+}
+
+# remove empty rows
+zwalks.summary <- filter(zwalks.summary, zwalks.summary$`1` > 0)
+
+
+zwalks.summary
+
+
+
+# moving average
+zwalks.summary.ma <- zwalks.summary
+
+for (i_col in 2:ncol(zwalks.summary)){
+  tmp_ma <- zwalks.summary %>% 
+    mutate(
+      lag0=(zwalks.summary[,i_col]),
+      lag1=lag(zwalks.summary[,i_col]),
+      lag2=lag(zwalks.summary[,i_col],2),
+      lag3=lag(zwalks.summary[,i_col],3),
+      lag4=lag(zwalks.summary[,i_col],4),
+      lag5=lag(zwalks.summary[,i_col],5),
+      lag6=lag(zwalks.summary[,i_col],6),
+      ma=(lag0+lag1+lag2+lag3+lag4+lag5+lag6)/7)
+  zwalks.summary.ma[,i_col] <- tmp_ma$ma
+}
+zwalks.summary.ma
+
+
+write.csv(zwalks.summary.ma, "zwalks.summary.ma.csv", row.names = FALSE)
+
+
+
+### calculate percentile
+### calc pct using exact numbers
+#zwalks.summary.pct <- zwalks.summary
+
+### calc pct using moving average
+zwalks.summary.pct <- zwalks.summary.ma
+zwalks.summary.pct = mutate(zwalks.summary.pct, `1` = ntile(zwalks.summary.ma$`1`,10))
+zwalks.summary.pct = mutate(zwalks.summary.pct, `2` = ntile(zwalks.summary.ma$`2`,10))
+zwalks.summary.pct = mutate(zwalks.summary.pct, `3` = ntile(zwalks.summary.ma$`3`,10))
+zwalks.summary.pct = mutate(zwalks.summary.pct, `4` = ntile(zwalks.summary.ma$`4`,10))
+zwalks.summary.pct = mutate(zwalks.summary.pct, `5` = ntile(zwalks.summary.ma$`5`,10))
+zwalks.summary.pct = mutate(zwalks.summary.pct, `6` = ntile(zwalks.summary.ma$`6`,10))
+zwalks.summary.pct = mutate(zwalks.summary.pct, `7` = 5) #ntile(zwalks.summary$`7`,10))
+zwalks.summary.pct = mutate(zwalks.summary.pct, `8` = ntile(zwalks.summary.ma$`8`,10))
+zwalks.summary.pct = mutate(zwalks.summary.pct, `9` = ntile(zwalks.summary.ma$`9`,10))
+zwalks.summary.pct = mutate(zwalks.summary.pct, `10` = ntile(zwalks.summary.ma$`10`,10))
+zwalks.summary.pct = mutate(zwalks.summary.pct, `11` = ntile(zwalks.summary.ma$`11`,10))
+zwalks.summary.pct = mutate(zwalks.summary.pct, `12` = ntile(zwalks.summary.ma$`12`,10))
+
+### remove first 7 days because of moving average
+zwalks.summary.pct <- zwalks.summary.pct[7:nrow(zwalks.summary.pct),]
+
+tail(zwalks.summary.pct)
+zwalks.summary
+write.csv(zwalks.summary, "zwalks.summary.csv", row.names = FALSE)
+write.csv(zwalks.summary.pct, "zwalks.summary.pct.csv", row.names = FALSE)
+
+
+### Color Codes for percentiles
+colfunc <- colorRampPalette(c("white", "#ff9696"))
+col_list <- colfunc(10)
+plot(rep(1,10),col=col_list,pch=19,cex=3)
+
+## Set colors for percentile
+zwalks.summary.colors <-zwalks.summary.pct
+for (i_col in 1:length(col_list)){
+  print(col_list[i_col])
+  zwalks.summary.colors[zwalks.summary.colors == i_col] <- col_list[i_col]   #"#FF0000"
+}
+
+zwalks.summary.colors
+
+
+
+# -------------------------- prapare plot --------------------------
+#load Stadtkreise
+zkreis <- st_read("./Stadtkreise/stzh.adm_stadtkreise_v.shp")
+head(zkreis)
+summary(zkreis)
+
+
+#load countingstations
+zstation <- st_read("./Countingstation/taz.view_eco_standorte.shp")
+head(zstation)
+zstation <- cbind(zstation, st_coordinates(zstation))
+summary(zstation)
+
+# Basic colors
+empty_kreis_color = "grey75"
+zkreis$color = "lightblue"
+png_output_path = "../png_output/"
+
+#zwalks.summary <- filter(zwalks.summary, zwalks.summary$`1` > 0)
+
+
+
+# -------------------------- plot map and save png --------------------------
+for (i_day_index in 7:nrow(zwalks.summary)){ 
+  print("Prepare day:")
+  tmp_current_date <- zwalks.summary$day[i_day_index]
+  print(tmp_current_date)
+  
+  # set color of current day
+  for (i_col in 1:nrow(zkreis)){
+    #zkreis$color[zkreis$knr == i_col] <- zwalks.summary.colors[i_day_index,i_col + 1] 
+    #print(i_col)
+    #print(zkreis[zkreis$knr == i_col,]$color)
+    zkreis[zkreis$knr == i_col,]$color <- zwalks.summary.colors[i_day_index, (i_col + 1)]
+    zkreis[zkreis$knr == 7,]$color  <- empty_kreis_color
+  }
+  
+  #plot Stadtkreise and Coutingstations
+  plot.kreis <- ggplot(zkreis) +
+    geom_sf(size = 1, color = "black", fill= zkreis$color) +
+    geom_sf_text(aes(label = knr), colour = "black") +
+    xlab(tmp_current_date)
+  
+  
+  ### Change plot title when lockdown
+  if (length(lockdown.1[lockdown.1 == tmp_current_date]) > 0) {
+    plot_title <- "Lockdown !"
+  } else {
+    plot_title <- ""
+  } 
+  
+  
+  plot.station <- plot.kreis + ggtitle(plot_title)
+  #+ geom_point(data = zstation, aes(x=X, y=Y), size = 3,  shape = 23, fill = "darkred")
+  
+  
+  ### Plot COVID Cases
+  min_date_on_plot <- "2020-03-1"
+  if(as.Date(tmp_current_date) > as.Date(min_date_on_plot)) {
+    date_plot_end <- tmp_current_date
+    print("date is larger")
+  } else {
+    date_plot_end <-toString(tmp_current_date)
+    date_plot_end <- min_date_on_plot
+    print("date is smaller")
+  }
+  
+  
+  covid.daterange<- filter(covid, between(covid$date, as.Date("2020-01-01"), as.Date(toString(date_plot_end))))
+  #covid.daterange<- filter(covid, between(covid$date, as.Date("2020-01-01"), as.Date("2020-04-01")))
+  print(covid.daterange$date)
+  print(covid.daterange$new_cases_smoothed)
+  
+  p.covid <- ggplot(covid.daterange, aes(x=date, y=new_cases_smoothed)) +
+    geom_line(color="red", size=0.7) + 
+    ggtitle("COVID Cases") +
+    ylab("") + 
+    xlab("")
+  print(p.covid)
+  
+  ### Arrange multiple plots in one figure
+  plot.arranged <- ggarrange(plot.station, p.covid, heights = c(2, 0.7),
+                             ncol = 1, nrow = 2)
+  
+  #print(plot.station)
+  print(plot.arranged)
+  
+  filenmae <- paste( png_output_path , toString(i_day_index), "_zwalks.png" ,  sep = "" )
+  print(filenmae)
+  ggsave(filenmae)
+  
+  
+}  
+
+# -------------------------- create video --------------------------
+
+file_name<- list.files(path=png_output_path)
+file_path <- paste(png_output_path , file_name,   sep = "" )
+
+file_list <- data.frame(file_name, file_path)
+file_list$sort_index = 0
+
+
+
+for (i in 1:nrow(file_list)){ 
+  file_list$sort_index[i] <- strtoi(strsplit(file_list$file_name[i], "_")[[1]][1])
+}
+
+file_list_sorted <- arrange(file_list, sort_index)
+
+
+av::av_encode_video(file_list_sorted$file_path, 'zwalks_animation.mp4', framerate = 3)
