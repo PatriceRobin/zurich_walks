@@ -2,6 +2,8 @@ if (!require(rgdal)) {install.packages('rgdal')}
 if (!require(sf)) {install.packages('sf')}
 if (!require(rasterVis)) {install.packages('rasterVis')}
 if (!require(ggplot2)) {install.packages('ggplot2')}
+if (!require(tidyverse)) {install.packages('"tidyverse"')}
+
 
 
 zzones <- st_read("./Quartieranalyse/QUARTIERE_F.shp")
@@ -46,3 +48,8 @@ zstation.zones$zones[zstation.zones$zones == "WLD"] <- "Recreation"
 zstation.zones$zones[zstation.zones$zones == "QI"] <- "Recreation"
 zstation.zones$zones[zstation.zones$zones == "GWS"] <- "Recreation"
 zstation.zones$zones[zstation.zones$zones == "IG I"] <- "Industry"
+
+
+
+zwalks.day2 <- zwalks.day %>% 
+  tidyr::separate(date, into = c("year", "month","day"))
