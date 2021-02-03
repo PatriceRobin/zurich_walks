@@ -193,14 +193,26 @@ zstation <- cbind(zstation, st_coordinates(zstation))
 summary(zstation)
 
 
+
+#Bauzonen
+zzones <- st_read("./Bauzonen/afs.bzo_zone_v.shp")
+
+summary(zzones)
+
+
 #plot Stadtkreise and Coutingstations
-plot.kreis <- ggplot(zkreis) +
-  geom_sf(size = 1, color = "black", fill="lightblue") +
-  geom_sf_text(aes(label = knr), colour = "black")
+plot.map <- ggplot()+
+  geom_sf(data = zzones, size = 0.25, color = "blue", fill="lightblue")
 
 
+plot.kreis <- plot.map +
+    geom_sf(data = zkreis, size = 1, color = "black", fill=NA)+
+    geom_sf_text(data = zkreis, aes(label = knr), colour = "black", size=12)
+  
+  
 plot.station <- plot.kreis + geom_point(data = zstation, aes(x=X, y=Y), size = 3, 
-                                  shape = 23, fill = "darkred")
+                                    shape = 23, fill = "red")
+  
 plot.station
 
 
@@ -210,11 +222,13 @@ zstation.kreis <- st_join(zstation, zkreis,
 
 head(zstation.kreis)
 
+
+
 #############################################################################
 # MEASUREMENTS and LOCATION
 #############################################################################
 
-zwalks.day.knr <- zwalks.day %>% left_join (select(zstation.kreis,
+zwalks.day.knr <- zwalks.day %>% left_join (dplyr::select(zstation.kreis,
                                                 fk_zaehler,
                                                 knr,
                                                 kname),

@@ -4,15 +4,14 @@ if (!require(rasterVis)) {install.packages('rasterVis')}
 if (!require(ggplot2)) {install.packages('ggplot2')}
 
 
-z.zones <- st_read("./Arbeitszonenbewirtschaftung/ARBEITSZONE_F.shp")
-head(z.zones)
+zzones <- st_read("./Quartieranalyse/QUARTIERE_F.shp")
 
-areas <- st_area(z.zones)
-hist(areas)
 
-plot(z.zones)
+summary(zzones)
+
+plot(zzones)
 
 ggplot() + 
-  geom_sf(data = z.zones, size = 0.5, color = "black", fill = NA) + 
+  geom_sf(data = zzones, size = 0.5, color = "black", fill = NA) + 
   ggtitle("Arbeitszonen") + 
   coord_sf()
