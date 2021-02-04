@@ -12,6 +12,8 @@ if (!require(av)) {install.packages('av')}
 if (!require(ggpubr)) {install.packages('ggpubr')}
 
 
+
+
 Sys.setlocale("LC_TIME", "English")
 
 #############################################################################
@@ -59,7 +61,7 @@ zwalks.day['people_all'] <-
 #add months and weekdays
 zwalks.day$year <- format(zwalks.day$date, "%Y")
 zwalks.day$month <- format(zwalks.day$date, "%B")
-zwalks.day$week <- format(zwalks.day$date, "%V")
+zwalks.day$week <- format(zwalks.day$date, "%W")
 zwalks.day$weekday <- weekdays(zwalks.day$date)
 
 weekday_order <- c( "Monday", "Tuesday", "Wednesday", "Thursday", "Friday","Saturday","Sunday")
