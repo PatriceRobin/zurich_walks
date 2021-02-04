@@ -42,25 +42,25 @@ zwalks[is.na(zwalks)] <- 0
 zwalks <- zwalks %>%
   rename(datetime = datum)
 
-
-#summarize bicycles and pedestrians
-zwalks['fuss_all'] <- zwalks$fuss_in + zwalks$fuss_out
-zwalks['velo_all'] <- zwalks$velo_in + zwalks$velo_out
-zwalks['people_all'] <-
-  zwalks$velo_all + zwalks$fuss_all
-
-#add months and weekdays
-zwalks$year <- format(zwalks$date, "%Y")
-zwalks$month <- format(zwalks$date, "%B")
-zwalks$week <- format(zwalks$date, "%Y-%V")
-zwalks$weekday <- weekdays(zwalks$date)
-
-
 #summarize data on a daily basis
 zwalks.day <-
-  aggregate(zwalks[c("velo_in", "velo_out", "velo_all", "fuss_in", "fuss_out", "fuss_all", "people_all")],
-            by = zwalks[c("fk_zaehler", "fk_standort", "date", "year", "month", "week", "weekday", "ost", "nord")],
+  aggregate(zwalks[c("velo_in", "velo_out", "fuss_in", "fuss_out")],
+            by = zwalks[c("fk_zaehler", "fk_standort", "date", "ost", "nord")],
             FUN = sum)
+
+
+
+#summarize bicycles and pedestrians
+zwalks.day['fuss_all'] <- zwalks.day$fuss_in + zwalks.day$fuss_out
+zwalks.day['velo_all'] <- zwalks.day$velo_in + zwalks.day$velo_out
+zwalks.day['people_all'] <-
+  zwalks.day$velo_all + zwalks.day$fuss_all
+
+#add months and weekdays
+zwalks.day$year <- format(zwalks.day$date, "%Y")
+zwalks.day$month <- format(zwalks.day$date, "%B")
+zwalks.day$week <- format(zwalks.day$date, "%V")
+zwalks.day$weekday <- weekdays(zwalks.day$date)
 
 weekday_order <- c( "Monday", "Tuesday", "Wednesday", "Thursday", "Friday","Saturday","Sunday")
 
@@ -86,6 +86,14 @@ zwalks.agg.month <-
             FUN = sum)
 
 summary(zwalks.agg.month)
+
+
+#pivot wide table
+pivot <- zwalks.agg.month %>%
+  dplyr::select(year, people_all, month) %>%
+  pivot_wider(names_from = year,
+              values_from = people_all)
+
 
 #############################################################################
 # Look at the data
@@ -305,9 +313,6 @@ zstation.zones$zones[zstation.zones$zones == "IG I"] <- "Industry" #Industrie
 
 
 
-
-
-
 #############################################################################
 # MEASUREMENTS and LOCATION
 #############################################################################
@@ -321,6 +326,31 @@ zwalks.day.knr <- zwalks.day %>% left_join (dplyr::select(zstation.zones,
 
 
 
+#pivot wide table -- week zones
+zwalks.week.zones <- zwalks.day.knr %>%
+  group_by(year, week, knr, zones) %>%
+  summarize(people_sum = sum(people_all))
+
+
+zwalks.week.zones <- zwalks.week.zones %>%
+  pivot_wider(names_from = year,
+              values_from = people_sum)
+
+zwalks.week.zones["difference_people"] <- zwalks.week.zones['2020'] - zwalks.week.zones['2019'] 
+
+
+
+#pivot wide table -- week knr
+zwalks.week.knr <- zwalks.day.knr %>%
+  group_by(year, week, knr) %>%
+  summarize(people_sum = sum(people_all))
+
+
+zwalks.week.knr <- zwalks.week.knr %>%
+  pivot_wider(names_from = year,
+              values_from = people_sum)
+
+zwalks.week.knr["difference_people"] <- zwalks.week.knr['2020'] - zwalks.week.knr['2019'] 
 
 
 #############################################################################
