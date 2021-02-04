@@ -1,34 +1,87 @@
 ---
-title: "zurich_walks"
+title: "Impact of Covid on Cyclists and Pedestrians in Zurich"
 author: "Patrice.Robin, Patrik.Widmer"
 date: "1 2 2021"
 output: pdf_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = FALSE ,
+                      message=FALSE,
+                      warning = FALSE,
+                      results = "hide"
+                      )
+
 ```
 
-## R Markdown
+# Introduction
 
+Covid19 had a huge impact on our society. It changed the way we interact on a professional and social level. Home offices, lockdowns, and partially closed stores have had a particularly severe impact on urban centers.
+
+In this paper, we will examine the impact of the pandemic on the number of pedestrians and bicycles in different areas of Zurich.
+
+The city of Zurich automatically collects data on pedestrians and bicyclists through counting loops installed in the ground in different areas of the city. We can get a clear view of the impact of Covid19 on our daily lives by looking at the data of pedestrians and cyclists in 2020 and comparing it to the previous year.
 
 ```{r load packages}
 # this line of code only runs, if these packages are required
 if (!require(tidyverse)) {install.packages('"tidyverse"')}
 if (!require(ggplot2)) {install.packages('ggplot2')}
 if (!require(scales)) {install.packages('scales')}
+if (!require(rgdal)) {install.packages('rgdal')}
+if (!require(sf)) {install.packages('sf')}
+if (!require(rasterVis)) {install.packages('rasterVis')}
+if (!require(dplyr)) {install.packages('dplyr')}
+if (!require(av)) {install.packages('av')}
+if (!require(ggpubr)) {install.packages('ggpubr')}
 ```
 
+```{r}
+#set local working directory to English
+Sys.setlocale("LC_TIME", "English")
+```
 
-## 
+# Data
+
+```{r covid}
+#load covid data
+#source : https://ourworldindata.org/coronavirus/country/switzerland?country=~CHE
+covid <- read.csv("covid-data.csv", encoding="UTF-8")
+covid$date <- as.Date(covid$date,format = "%d.%m.%y")
+
+```
 
 ```{r zwalks}
-#set local settings to English
-Sys.setlocale("LC_TIME", "English")
+#load pedestrian and cyclist data
+#source: https://data.stadt-zuerich.ch/dataset/ted_taz_verkehrszaehlungen_werte_fussgaenger_velo
+zwalks2020 <- read.csv("2020_verkehrszaehlungen_werte_fussgaenger_velo.csv") #2019
+zwalks2019 <- read.csv("2019_verkehrszaehlungen_werte_fussgaenger_velo.csv") #2020
 
-#load data 2020
-zwalks = read.csv("2020_verkehrszaehlungen_werte_fussgaenger_velo.csv")
+zwalks <- dplyr::union(zwalks2020, zwalks2019)
+
 ```
 
+```{r kreis}
+#load Stadtkreise
+#source https://data.stadt-zuerich.ch/dataset/geo_stadtkreise
+zkreis <- st_read("./Stadtkreise/stzh.adm_stadtkreise_v.shp")
 
+```
 
+```{r zstation}
+#load countingstations
+#source https://data.stadt-zuerich.ch/dataset/geo_standorte_der_automatischen_fuss__und_vlozaehlungen
+
+zstation <- st_read("./Countingstation/taz.view_eco_standorte.shp")
+```
+
+```{r zdistricts}
+#Districts
+#source: https://data.stadt-zuerich.ch/dataset/ktzh_quartieranalyse
+zdistricts <- st_read("./Quartieranalyse/QUARTIERE_F.shp")
+```
+
+```{r zzones}
+#Bauzonen
+#sources https://data.stadt-zuerich.ch/dataset/geo_nutzungsplanung___kommunale_bau__und_zonenordnung__bzo__jahresendstand_2020
+zzones <- st_read("./Bauzonen/afs.bzo_zone_v.shp")
+```

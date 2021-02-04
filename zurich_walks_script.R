@@ -61,7 +61,9 @@ zwalks.day['people_all'] <-
 #add months and weekdays
 zwalks.day$year <- format(zwalks.day$date, "%Y")
 zwalks.day$month <- format(zwalks.day$date, "%B")
-zwalks.day$week <- format(zwalks.day$date, "%W")
+zwalks.day$week <- format(zwalks.day$date, "%W") #create weeks from date
+zwalks.day$week <- as.numeric(zwalks.day$week) + 1 #make numeric and add 1 so that it goes from 1 to 53
+
 zwalks.day$weekday <- weekdays(zwalks.day$date)
 
 weekday_order <- c( "Monday", "Tuesday", "Wednesday", "Thursday", "Friday","Saturday","Sunday")
