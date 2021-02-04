@@ -328,7 +328,7 @@ zwalks.day.knr <- zwalks.day %>% left_join (dplyr::select(zstation.zones,
 
 #pivot wide table -- week zones
 zwalks.week.zones <- zwalks.day.knr %>%
-  group_by(year, week, knr, zones) %>%
+  group_by(year, week, zones) %>%
   summarize(people_sum = sum(people_all))
 
 
@@ -477,7 +477,7 @@ write.csv(zwalks.summary.pct, "zwalks.summary.pct.csv", row.names = FALSE)
 
 
 ### Color Codes for percentiles
-colfunc <- colorRampPalette(c("white", "#ff9696"))
+colfunc <- colorRampPalette(c("blue", "#ff9696"))
 col_list <- colfunc(10)
 plot(rep(1,10),col=col_list,pch=19,cex=3)
 
@@ -508,7 +508,12 @@ summary(zstation)
 # Basic colors
 empty_kreis_color = "grey75"
 zkreis$color = "lightblue"
-png_output_path = "../png_output/"
+
+# create new directory & subdirectory
+ifelse(!dir.exists(file.path("../png_output/")), {dir.create(file.path("../png_output/")); "Directory created"}, "Directory already exists")
+ifelse(!dir.exists(file.path("../png_output/zwalks_day")), {dir.create(file.path("../png_output/zwalks_day")); "Subdirectory created"}, "Subirectory already exists")
+png_output_path = "../png_output/zwalks_day"
+
 
 #zwalks.summary <- filter(zwalks.summary, zwalks.summary$`1` > 0)
 
@@ -566,7 +571,7 @@ for (i_day_index in 7:nrow(zwalks.summary)){
   print(covid.daterange$new_cases_smoothed)
   
   p.covid <- ggplot(covid.daterange, aes(x=date, y=new_cases_smoothed)) +
-    geom_line(color="red", size=0.7) + 
+    geom_line(color="green", size=0.7) + 
     ggtitle("COVID Cases") +
     ylab("") + 
     xlab("")
@@ -604,3 +609,15 @@ file_list_sorted <- arrange(file_list, sort_index)
 
 
 av::av_encode_video(file_list_sorted$file_path, 'zwalks_animation.avi', framerate = 3)
+
+
+
+#############################################################################
+# Video Week
+#############################################################################
+
+
+# create new directory & subdirectory
+ifelse(!dir.exists(file.path("../png_output/")), {dir.create(file.path("../png_output/")); "Directory created"}, "Directory already exists")
+ifelse(!dir.exists(file.path("../png_output/zwalks_week")), {dir.create(file.path("../png_output/zwalks_week")); "Subdirectory created"}, "Subirectory already exists")
+png_output_path = "../png_output/zwalks_week"
