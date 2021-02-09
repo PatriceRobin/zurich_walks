@@ -50,8 +50,6 @@ zwalks.day <-
             by = zwalks[c("fk_zaehler", "fk_standort", "date", "ost", "nord")],
             FUN = sum)
 
-
-
 #summarize bicycles and pedestrians
 zwalks.day['fuss_all'] <- zwalks.day$fuss_in + zwalks.day$fuss_out
 zwalks.day['velo_all'] <- zwalks.day$velo_in + zwalks.day$velo_out
@@ -64,6 +62,7 @@ zwalks.day$month <- format(zwalks.day$date, "%B")
 zwalks.day$week <- format(zwalks.day$date, "%W") #create weeks from date
 zwalks.day$week <- as.numeric(zwalks.day$week) + 1 #make numeric and add 1 so that it goes from 1 to 53
 
+#weekdays
 zwalks.day$weekday <- weekdays(zwalks.day$date)
 
 weekday_order <- c( "Monday", "Tuesday", "Wednesday", "Thursday", "Friday","Saturday","Sunday")

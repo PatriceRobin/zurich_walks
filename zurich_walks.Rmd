@@ -35,14 +35,29 @@ if (!require(av)) {install.packages('av')}
 if (!require(ggpubr)) {install.packages('ggpubr')}
 ```
 
-```{r}
+```{r english_local}
 #set local working directory to English
 Sys.setlocale("LC_TIME", "English")
 ```
 
 # Data
+For our analysis, we relay on data from two sources:
 
-```{r covid}
+-   All the data regarding Zurich are pulled from the official website of the city of Zurich *Open Data Stadt Zürich*
+
+    -   Number of pedestrians and bicycles
+
+    -   The location of the counting stations.
+
+    -   The different *Stadtkreise* and their geodata points.
+
+    -   The different districts in Zurich with the corresponding geo data points.
+
+    -   A categorization of different areas based on their usage and building development.
+
+-   The Covid19 data for Switzerland including the categories *cases, deaths, test, hospitalization, and vaccinations* are based on the research of Roser et al. (2020) and pulled from the OUr World in Data website.
+
+```{r load_covid}
 #load covid data
 #source : https://ourworldindata.org/coronavirus/country/switzerland?country=~CHE
 covid <- read.csv("covid-data.csv", encoding="UTF-8")
@@ -50,7 +65,7 @@ covid$date <- as.Date(covid$date,format = "%d.%m.%y")
 
 ```
 
-```{r zwalks}
+```{r load_zwalks}
 #load pedestrian and cyclist data
 #source: https://data.stadt-zuerich.ch/dataset/ted_taz_verkehrszaehlungen_werte_fussgaenger_velo
 zwalks2020 <- read.csv("2020_verkehrszaehlungen_werte_fussgaenger_velo.csv") #2019
@@ -60,28 +75,90 @@ zwalks <- dplyr::union(zwalks2020, zwalks2019)
 
 ```
 
-```{r kreis}
+```{r load_kreis}
 #load Stadtkreise
 #source https://data.stadt-zuerich.ch/dataset/geo_stadtkreise
 zkreis <- st_read("./Stadtkreise/stzh.adm_stadtkreise_v.shp")
 
 ```
 
-```{r zstation}
+```{r load_zstation}
 #load countingstations
 #source https://data.stadt-zuerich.ch/dataset/geo_standorte_der_automatischen_fuss__und_vlozaehlungen
 
 zstation <- st_read("./Countingstation/taz.view_eco_standorte.shp")
 ```
 
-```{r zdistricts}
+```{r load_zdistricts}
 #Districts
 #source: https://data.stadt-zuerich.ch/dataset/ktzh_quartieranalyse
 zdistricts <- st_read("./Quartieranalyse/QUARTIERE_F.shp")
 ```
 
-```{r zzones}
+```{r load_zzones}
 #Bauzonen
 #sources https://data.stadt-zuerich.ch/dataset/geo_nutzungsplanung___kommunale_bau__und_zonenordnung__bzo__jahresendstand_2020
 zzones <- st_read("./Bauzonen/afs.bzo_zone_v.shp")
 ```
+
+## Preparation
+In the initial dataset summarizes the counted pedestrians and cyclists into timeframes of 15 minutes. DUe to our interest into daily, weekly and monthly changes, we bring the counting data into needed format.
+
+```{r clean_data}
+#extract date from datetime
+zwalks['date'] <- as.Date(zwalks$DATUM)
+
+#lower cases column names
+zwalks <- setNames(zwalks, tolower(names(zwalks)))
+
+#replace NA with 0
+zwalks[is.na(zwalks)] <- 0
+
+#rename columns
+zwalks <- zwalks %>%
+  rename(datetime = datum)
+```
+
+```{r summarize_daily}
+#summarize data on a daily basis
+zwalks.day <-
+  aggregate(zwalks[c("velo_in", "velo_out", "fuss_in", "fuss_out")],
+            by = zwalks[c("fk_zaehler", "fk_standort", "date", "ost", "nord")],
+            FUN = sum)
+
+#summarize bicycles and pedestrians
+zwalks.day['fuss_all'] <- zwalks.day$fuss_in + zwalks.day$fuss_out
+zwalks.day['velo_all'] <- zwalks.day$velo_in + zwalks.day$velo_out
+zwalks.day['people_all'] <-
+  zwalks.day$velo_all + zwalks.day$fuss_all
+```
+
+```{r zwalks_date}
+#add months and weekdays
+zwalks.day$year <- format(zwalks.day$date, "%Y")
+zwalks.day$month <- format(zwalks.day$date, "%B")
+zwalks.day$week <- format(zwalks.day$date, "%W") #create weeks from date
+zwalks.day$week <- as.numeric(zwalks.day$week) + 1 #make numeric and add 1 so that it goes from 1 to 53
+
+#weekdays
+zwalks.day$weekday <- weekdays(zwalks.day$date)
+
+weekday_order <- c( "Monday", "Tuesday", "Wednesday", "Thursday", "Friday","Saturday","Sunday")
+```
+
+```{r join_zwalks_covid}
+# left join zwalks agg and covid on date
+zwalks.covid <- zwalks.agg %>% left_join(dplyr::select(covid,
+                                                       date,
+                                                       new_cases_smoothed),
+                                         by = "date")
+```
+
+```{r agg_monthly}
+
+zwalks.agg.month <-
+  aggregate(zwalks.day[c("people_all", "fuss_all", "velo_all")],
+            by = zwalks.day[c( "year", "month")],
+            FUN = sum)
+```
+
