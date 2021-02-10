@@ -39,6 +39,7 @@ zwalks <- setNames(zwalks, tolower(names(zwalks)))
 
 #replace NA with 0
 zwalks[is.na(zwalks)] <- 0
+covid$new_cases_smoothed[is.na(covid$new_cases_smoothed)] <- 0
 
 #rename columns
 zwalks <- zwalks %>%
@@ -58,7 +59,7 @@ zwalks.day['people_all'] <-
 
 #add months and weekdays
 zwalks.day$year <- format(zwalks.day$date, "%Y")
-zwalks.day$month <- format(zwalks.day$date, "%B")
+zwalks.day$month <- format(zwalks.day$date, "%b")
 zwalks.day$week <- format(zwalks.day$date, "%W") #create weeks from date
 zwalks.day$week <- as.numeric(zwalks.day$week) + 1 #make numeric and add 1 so that it goes from 1 to 53
 
@@ -80,19 +81,18 @@ zwalks.covid <- zwalks.agg %>% left_join(dplyr::select(covid,
                                                        new_cases_smoothed),
                                          by = "date")
 
+#replace NA with 0 in covid cases
+zwalks.covid[is.na(zwalks.covid)] <- 0
 
-
-
-zwalks.agg.month <-
-  aggregate(zwalks.day[c("people_all", "fuss_all", "velo_all")],
-            by = zwalks.day[c( "year", "month")],
+zwalks.covid.month <-
+  aggregate(zwalks.covid[c("people_all", "fuss_all", "velo_all","new_cases_smoothed")],
+            by = zwalks.covid[c( "year", "month")],
             FUN = sum)
 
-summary(zwalks.agg.month)
 
 
-#pivot wide table
-pivot <- zwalks.agg.month %>%
+#pivot wide table on months
+zwalks.month.wide <- zwalks.covid.month %>%
   dplyr::select(year, people_all, month) %>%
   pivot_wider(names_from = year,
               values_from = people_all)
@@ -109,46 +109,69 @@ sapply(zwalks, n_distinct)
 #############################################################################
 
 #Aggregated Data - Daily 2019/2020
-ggplot(zwalks.agg, aes(x=date, y=people_all)) +
+p.months1 <- ggplot(zwalks.covid, aes(x=date, y=people_all)) +
   geom_point(na.rm = TRUE, size = 0.75) +
-  ggtitle("Pedestrian and Bicycles in Zurich through 2020") +
-  xlab("2019-2020") +
-  ylab("Pedestrians and Bicycles") +
+  xlab("") +
+  ylab("Daily Total") +
   scale_x_date(
-    labels = date_format("%B"),
+    labels = date_format("%b"),
     breaks = "1 month") + 
   theme(axis.text.x = element_text(angle = 45)) +
-  geom_point(aes(colour = factor(year)), size = 4)
+  geom_point(aes(colour = factor(year)), size = 2)+
+  theme(legend.position = "none")
+
+# 
+# p.months2 <- ggplot(zwalks.covid, aes(x=factor(month, level=month.abb), y=people_all)) +
+#   geom_point(na.rm = TRUE, size = 0.75) +
+#   xlab(" ") +
+#   ylab("Total Pedestrians and Cyclists") +
+#   theme(axis.text.x = element_text(angle = 45)) +
+#   geom_point(aes(colour = factor(year)), size = 4)
 
 
-ggplot(zwalks.agg, aes(x=factor(month, level=month.name), y=people_all)) +
-  geom_point(na.rm = TRUE, size = 0.75) +
-  ggtitle("Pedestrian and Bicycles in Zurich through 2020") +
-  xlab("2019-2020") +
-  ylab("Pedestrians and Bicycles") +
-  theme(axis.text.x = element_text(angle = 45)) +
-  geom_point(aes(colour = factor(year)), size = 4)
-
-
-ggplot(zwalks.agg.month, aes(x=factor(month, level=month.name), y=people_all)) +
+p.months3 <- ggplot(zwalks.covid.month, aes(x=factor(month, level=month.abb), y=people_all)) +
   geom_line(na.rm = TRUE, size = 0.75) +
-  ggtitle("Pedestrian and Bicycles in Zurich through 2020") +
-  xlab("2019-2020") +
-  ylab("Pedestrians and Bicycles") +
+  xlab("") +
+  ylab("Monthly Total") +
   theme(axis.text.x = element_text(angle = 45)) +
-  geom_point(aes(colour = factor(year)), size = 4)
+  geom_point(aes(colour = factor(year)), size = 4)+
+  labs(color = "Year") 
 
 
-ggplot(zwalks.agg.month, aes(x=factor(month, level=month.name), y=people_all, group=year, colour=year))+
+p.months4 <-ggplot(zwalks.covid.month, aes(x=factor(month, level=month.abb), y=people_all, group=year, colour=year))+
   geom_line(size=2)+
-  ggtitle("Pedestrian and Bicycles in Zurich through 2020") +
-  xlab("2019-2020") +
-  ylab("Pedestrians and Bicycles") +
-  theme(axis.text.x = element_text(angle = 45))
+  xlab("") +
+  ylab(" ") +
+  theme(axis.text.x = element_text(angle = 45))+
+  scale_fill_discrete(name = "Year")
+
+plot.months <- ggarrange(
+  p.months1,
+  ggarrange(
+    p.months3,
+    p.months4,
+    common.legend = TRUE,
+    legend = "bottom"
+  ),
+  nrow = 2
+)
+
+plot.months <- annotate_figure(
+  plot.months,
+  top = text_grob(
+    "Pedestirans and cyclists in 2019 and 2020",
+    color = "black",
+    face = "bold",
+    size = 14),
+  left = text_grob("Counted Pedestrians and Bicycles", color = "black", rot = 90)
+)
+
+plot.months
+
 
 
 #Months
-ggplot(zwalks.agg, aes(x=factor(month, level=month.name), y=people_all)) +
+ggplot(zwalks.covid, aes(x=factor(month, level=month.name), y=people_all)) +
   stat_summary(fun = "sum", geom = "bar")+
   ggtitle("Pedestrian and Bicycles in Zurich through 2020") +
   xlab("Month") +
@@ -156,19 +179,19 @@ ggplot(zwalks.agg, aes(x=factor(month, level=month.name), y=people_all)) +
 
 
 #Weekdays
-ggplot(zwalks.agg, aes(x=factor(weekday, level=weekday_order), y=people_all)) +
+ggplot(zwalks.covid, aes(x=factor(weekday, level=weekday_order), y=people_all)) +
   stat_summary(fun = "mean", geom = "bar")+
   ggtitle("Pedestrian and Bicycles in Zurich through 2020") +
   xlab("Weekday") +
   ylab("Pedestrians and Bicycles")
 
 # COVID Cases
-p <- ggplot(covid, aes(x=date, y=new_cases_smoothed)) +
+p.covid <- ggplot(covid, aes(x=date, y=new_cases_smoothed)) +
   geom_line() + 
   ggtitle("New COVID Cases (smoothed)") +
   ylab("COVID Cases") + 
   xlab("Date")
-p
+p.covid
 
 #############################################################################
 # ANALYZIS

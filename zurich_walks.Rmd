@@ -41,21 +41,22 @@ Sys.setlocale("LC_TIME", "English")
 ```
 
 # Data
-For our analysis, we relay on data from two sources:
 
--   All the data regarding Zurich are pulled from the official website of the city of Zurich *Open Data Stadt Zürich*
+All the data regarding Zurich are pulled from the official website of the city of Zurich *Open Data Stadt Zürich*. The fallowing information are used in this paper:
 
-    -   Number of pedestrians and bicycles
+-   Number of pedestrians and bicycles counted in 2020 and 2019
 
-    -   The location of the counting stations.
+-   The location of the counting stations.
 
-    -   The different *Stadtkreise* and their geodata points.
+-   The different *Stadtkreise* and their geodata points.
 
-    -   The different districts in Zurich with the corresponding geo data points.
+-   The different districts in Zurich with the corresponding geo data points.
 
-    -   A categorization of different areas based on their usage and building development.
+-   A categorization of different areas based on their usage and building development.
 
--   The Covid19 data for Switzerland including the categories *cases, deaths, test, hospitalization, and vaccinations* are based on the research of Roser et al. (2020) and pulled from the OUr World in Data website.
+The Covid19 data for Switzerland including the categories *cases, deaths, test, hospitalization, and vaccinations* are based on the research of Roser et al. (2020) and pulled from the *Our World in Data* website. In this paper, we will use the smoothed numbers of newly infected people in Switzerland. We decided to use the smoothed numbers since the newly reported cases are directly linked to the working week of medical staff, laboratories, and the Federal Office of Public Health Switzerland (FOPH). As a result, often fewer cases are reported on the weekend and more cases are listed in the beginning of the working week.
+
+Due to the smoothing of the data, the first recorded Covid19 case in our dataset is from 01.03.2020, while the first recorded case actually appeared on the 25.02.2020.
 
 ```{r load_covid}
 #load covid data
@@ -102,7 +103,15 @@ zzones <- st_read("./Bauzonen/afs.bzo_zone_v.shp")
 ```
 
 ## Preparation
-In the initial dataset summarizes the counted pedestrians and cyclists into timeframes of 15 minutes. DUe to our interest into daily, weekly and monthly changes, we bring the counting data into needed format.
+
+In the initial dataset summarizes the counted pedestrians and cyclists into time frames of 15 minutes. Due to our interest into daily, weekly and monthly changes, we bring the counting data into needed format. Additionally, several adjustment to the data are made for a simpler comparison. The counting stations indicate whether an individual is going into or going out of a center. Since we are interested in the total number of individuals walking or cycling in the area, we summarize them into one number each:
+
+-   Total cyclists
+-   Total Pedestrians
+
+Furthermore, we also summarize those two numbers into one single number containing all the measured pedestrians and cyclists at each location:
+
+-   Total People
 
 ```{r clean_data}
 #extract date from datetime
@@ -133,10 +142,12 @@ zwalks.day['people_all'] <-
   zwalks.day$velo_all + zwalks.day$fuss_all
 ```
 
+In a second step, we join the smoothed Covid data to our daily records of cyclists and pedestrians. Before 01.03.2020 there are no Covid cases.
+
 ```{r zwalks_date}
 #add months and weekdays
 zwalks.day$year <- format(zwalks.day$date, "%Y")
-zwalks.day$month <- format(zwalks.day$date, "%B")
+zwalks.day$month <- format(zwalks.day$date, "%b")
 zwalks.day$week <- format(zwalks.day$date, "%W") #create weeks from date
 zwalks.day$week <- as.numeric(zwalks.day$week) + 1 #make numeric and add 1 so that it goes from 1 to 53
 
@@ -147,18 +158,123 @@ weekday_order <- c( "Monday", "Tuesday", "Wednesday", "Thursday", "Friday","Satu
 ```
 
 ```{r join_zwalks_covid}
+# overall pedestrians and bicycles
+zwalks.agg <-
+  aggregate(zwalks.day[c("people_all", "fuss_all", "velo_all")],
+            by = zwalks.day[c( "date", "month", "weekday", "week","year")],
+            FUN = sum)
+
 # left join zwalks agg and covid on date
-zwalks.covid <- zwalks.agg %>% left_join(dplyr::select(covid,
-                                                       date,
-                                                       new_cases_smoothed),
-                                         by = "date")
+zwalks.covid <- zwalks.agg %>%
+  left_join(dplyr::select(covid,
+                          date,
+                          new_cases_smoothed),
+            by = "date")
+
 ```
 
 ```{r agg_monthly}
+#replace NA with 0 in covid cases
+zwalks.covid[is.na(zwalks.covid)] <- 0
 
-zwalks.agg.month <-
-  aggregate(zwalks.day[c("people_all", "fuss_all", "velo_all")],
-            by = zwalks.day[c( "year", "month")],
+zwalks.covid.month <-
+  aggregate(zwalks.covid[c("people_all", "fuss_all", "velo_all","new_cases_smoothed")],
+            by = zwalks.covid[c( "year", "month")],
             FUN = sum)
+
+
+
+#pivot wide table on months
+zwalks.month.wide <- zwalks.covid.month %>%
+  dplyr::select(year, people_all, month) %>%
+  pivot_wider(names_from = year,
+              values_from = people_all)
 ```
 
+Based on the information of the Swiss Tourism Federation (2021) we additionally the two lockdowns in 2020. The first lockdown from March 16th 2020 until Mai 11th 2020. The second lockdown starting in 22nd December 2020 and ongoing in the next year.
+
+```{r}
+### define lockdown period
+### chronic of lockdowns https://www.stv-fst.ch/de/chronik-coronavirus
+lockdown.1 <- seq(as.Date("2020/03/16"), by = "day", length.out = 57)
+lockdown.2 <- seq(as.Date("2020/12/22"), by = "day", length.out = 10)
+
+### add lockdown flag to dataset zwalks.covid
+zwalks.covid$lockdown <- FALSE
+zwalks.covid$lockdown01 <- 0
+
+zwalks.covid[zwalks.covid$date %in% lockdown.1 , ]$lockdown <- TRUE
+zwalks.covid[zwalks.covid$date %in% lockdown.1 , ]$lockdown01 <- 1
+
+zwalks.covid[zwalks.covid$date %in% lockdown.2 , ]$lockdown <- TRUE
+zwalks.covid[zwalks.covid$date %in% lockdown.1 , ]$lockdown01 <- 1
+
+```
+
+# Visualization
+
+```{r month_plots, results="markup"}
+#Aggregated Data - Daily 2019/2020
+p.months1 <- ggplot(zwalks.covid, aes(x=date, y=people_all)) +
+  geom_point(na.rm = TRUE, size = 0.75) +
+  xlab("") +
+  ylab("Daily Total") +
+  scale_x_date(
+    labels = date_format("%b"),
+    breaks = "1 month") + 
+  theme(axis.text.x = element_text(angle = 45)) +
+  geom_point(aes(colour = factor(year)), size = 2)+
+  theme(legend.position = "none")
+
+# 
+# p.months2 <- ggplot(zwalks.covid, aes(x=factor(month, level=month.abb), y=people_all)) +
+#   geom_point(na.rm = TRUE, size = 0.75) +
+#   xlab(" ") +
+#   ylab("Total Pedestrians and Cyclists") +
+#   theme(axis.text.x = element_text(angle = 45)) +
+#   geom_point(aes(colour = factor(year)), size = 4)
+
+
+p.months3 <- ggplot(zwalks.covid.month, aes(x=factor(month, level=month.abb), y=people_all)) +
+  geom_line(na.rm = TRUE, size = 0.75) +
+  xlab("") +
+  ylab("Monthly Total") +
+  theme(axis.text.x = element_text(angle = 45)) +
+  geom_point(aes(colour = factor(year)), size = 4)+
+  labs(color = "Year") 
+
+
+p.months4 <-ggplot(zwalks.covid.month, aes(x=factor(month, level=month.abb), y=people_all, group=year, colour=year))+
+  geom_line(size=2)+
+  xlab("") +
+  ylab(" ") +
+  theme(axis.text.x = element_text(angle = 45))+
+  scale_fill_discrete(name = "Year")
+
+plot.months <- ggarrange(
+  p.months1,
+  ggarrange(
+    p.months3,
+    p.months4,
+    common.legend = TRUE,
+    legend = "bottom"
+  ),
+  nrow = 2
+)
+
+plot.months <- annotate_figure(
+  plot.months,
+  top = text_grob(
+    "Pedestirans and cyclists in 2019 and 2020",
+    color = "black",
+    face = "bold",
+    size = 14),
+    left = text_grob("Counted Pedestrians and Bicycles", color = "black", rot = 90)
+  )
+
+plot.months
+```
+
+# Conclusion
+
+It would be interesting to quantify the impact of the two lockdown on the number of pedestrians and cyclists statistically. For this we a longer time series than just two years.
