@@ -218,7 +218,7 @@ zwalks.covid[zwalks.covid$date %in% lockdown.1 , ]$lockdown01 <- 1
 p.months1 <- ggplot(zwalks.covid, aes(x=date, y=people_all)) +
   geom_point(na.rm = TRUE, size = 0.75) +
   xlab("") +
-  ylab("Daily Total") +
+  ylab("Daily per Location ") +
   scale_x_date(
     labels = date_format("%b"),
     breaks = "1 month") + 
@@ -240,7 +240,7 @@ p.months3 <- ggplot(zwalks.covid.month, aes(x=factor(month, level=month.abb), y=
   xlab("") +
   ylab("Monthly Total") +
   theme(axis.text.x = element_text(angle = 45)) +
-  geom_point(aes(colour = factor(year)), size = 4)+
+  geom_point(aes(colour = factor(year)), size = 2)+
   labs(color = "Year") 
 
 
@@ -269,7 +269,7 @@ plot.months <- annotate_figure(
     color = "black",
     face = "bold",
     size = 14),
-    left = text_grob("Counted Pedestrians and Bicycles", color = "black", rot = 90)
+    left = text_grob("Counted Pedestrians and Bicycles",vjust=-.02, color = "black", rot = 90, hjust=0.5)
   )
 
 plot.months
