@@ -227,19 +227,37 @@ zwalks.covid[zwalks.covid$date %in% lockdown.1 , ]$lockdown01 <- 1
 
 
 ###  Boxplot 
-ggplot(mapping = aes(y = zwalks.covid$people_all,
-                     x = zwalks.covid$lockdown)) +
+covid.box <- ggplot(data = zwalks.covid %>% filter(year == 2020),
+       mapping = aes(y = people_all,
+                     x = lockdown)) +
   geom_boxplot() +
   geom_hline(yintercept = 0) +
-  ylab("people_all") +
-  xlab("lockdown")
+  ylab("Pedestrians and Cyclists") +
+  xlab("Lockdown")+
+  ylim(0, 125000)
 
 ###  Plot People vs Cases 
-plot(y = zwalks.covid$people_all, 
-     x = zwalks.covid$new_cases_smoothed,
-     main = " ",
-     xlab = "new_cases_smoothed",
-     ylab = "people_all" )
+covid.plot <- ggplot(data = zwalks.covid %>% filter(year == 2020),
+       aes(y = people_all,
+           x = new_cases_smoothed))+
+         geom_point() +
+  xlab("New Covid Cases Smoothed")+
+  ylab("Pedestrians and Cyclists")+
+  ylim(0, 125000)+
+  geom_smooth(method = "lm", formula = y ~ poly(x, 2))
+
+
+
+###  Plot People vs Cases 
+covid.bar <- ggplot(data = zwalks.covid %>% filter(year == 2020),
+                     aes(y = people_all,
+                         x = new_cases_smoothed))+
+  geom_bar(stat='identity')+
+  xlab("New Covid Cases Smoothed")+
+  ylab("Pedestrians and Cyclists")+
+  ylim(0, 125000)
+
+
 
 
 ### Logistic regression
@@ -249,7 +267,7 @@ summary(zwalks.covid.glm)
 
 
 ### Plot the Logistic regression
-ggplot(data = zwalks.covid,
+covid.lr <- ggplot(data = zwalks.covid,
        mapping = aes(y = lockdown01,
                      x = people_all)) + 
   geom_point() +
@@ -257,6 +275,26 @@ ggplot(data = zwalks.covid,
               se = FALSE,
               method.args = list(family = "binomial")) 
 
+
+
+p.covid <- ggarrange(
+  covid.plot,
+  covid.box,
+  covid.lr,
+  align = "hv",
+  nrow = 2)
+
+
+p.covid <- annotate_figure(
+  p.covid,
+  top = text_grob(
+    "Pedestrians and cyclists in 2020 compared to covid cases and lockdown",
+    color = "black",
+    face = "bold",
+    size = 14)
+)
+
+p.covid
 
 #############################################################################
 # LOCATION
@@ -392,6 +430,27 @@ zwalks.week.knr <- zwalks.week.knr %>%
 
 zwalks.week.knr["difference_people"] <- zwalks.week.knr['2020'] - zwalks.week.knr['2019'] 
 
+
+#############################################################################
+# Boxplot locations
+#############################################################################
+
+
+#Cyclists per stadtkreis
+ggplot(zwalks.day.knr, aes(fill=year, x=factor(month, level=month.abb), y=velo_all)) +
+  geom_bar(position = "dodge", stat="identity") +
+  ggtitle("Cyclists in Zurich") +
+  xlab("Month") +
+  ylab("Total Cyclist") +
+  facet_wrap( ~ knr, scales = "free_y")
+
+#Cyclists
+ggplot(zwalks.day.knr, aes(fill=year, x=factor(month, level=month.abb), y=velo_all)) +
+  geom_bar(position = "dodge", stat="identity") +
+  ggtitle("Cyclists in Zurich") +
+  xlab("Month") +
+  ylab("Total Cyclist") +
+  facet_wrap( ~ zones, scales = "free_y")
 
 #############################################################################
 # LOCATION animation

@@ -235,7 +235,7 @@ p.months1 <- ggplot(zwalks.covid, aes(x=date, y=people_all)) +
 #   geom_point(aes(colour = factor(year)), size = 4)
 
 
-p.months3 <- ggplot(zwalks.covid.month, aes(x=factor(month, level=month.abb), y=people_all)) +
+p.months3 <- ggplot(zwalks.covid.month, aes(x=factor(month, level=month.abb), y=people_all))+
   geom_line(na.rm = TRUE, size = 0.75) +
   xlab("") +
   ylab("Monthly Total") +
@@ -274,6 +274,88 @@ plot.months <- annotate_figure(
 
 plot.months
 ```
+
+# Covid and Lockdown
+
+In the next step we take a look ath how the smoothed covid cases and the counted pedestrians and cyclists are plotted against each other. We only include the counting data from March 1st 2020 until December 31st 2020.
+
+By adding a regression line, we can see that there is a negative correlation between the number of cases and the number of counted people. However, the covnfidence intervall of the trend line is not very accurate and an inexisting confidenceintervall with low covid cases.
+
+The clear right scewing of the dat is not a surpise, as we had most of the time below 1000 new covid cases per day. The big variety of recorded people in the street are likely due to whether, temperatures, seasonality but also due to the lockdown. The lockdwon is a political decision on not directly triggered or linked to the number of recorded cases.
+
+
+Additionaly, we take a look at the counted people during the two lockdowns and non-lockdown period. The lockdown boxplot clearly indicates that there is a difference between the counted people during lockdown and during non-lockdown, with fewer people on the street during the two periods of lockdown.
+
+In a third look at the relationship between the recorded cyclists and pedestrians and the two lockdowns by applying a logistic regression. It becomes clear, that the lockdown has indeed a negative impact on the number of recorded people on the street.
+```{r covid_plots, results="markup"}
+###  Boxplot
+covid.box <-
+  ggplot(
+    data = zwalks.covid %>% filter(date >= "2020-03-01"),
+    mapping = aes(y = people_all,
+                  x = lockdown)
+  ) +
+  geom_boxplot() +
+  geom_hline(yintercept = 0) +
+  ylab("People") +
+  xlab("Lockdown") +
+  ylim(0, 125000)
+
+###  Plot People vs Cases
+covid.plot <-
+  ggplot(data = zwalks.covid %>% filter(date >= "2020-03-01"),
+         aes(y = people_all,
+             x = new_cases_smoothed)) +
+  geom_point() +
+  xlab("New Covid Cases Smoothed") +
+  ylab("People") +
+  ylim(0, 125000) +
+  geom_smooth(method = "lm")
+
+### Logistic regression
+zwalks.covid.glm <-
+  glm(lockdown ~  people_all, family = "binomial",
+      data = zwalks.covid %>% filter(date >= "2020-03-01"))
+
+summary(zwalks.covid.glm)
+
+
+### Plot the Logistic regression
+covid.lr1 <- ggplot(data = zwalks.covid %>% filter(date >= "2020-03-01"),
+                   mapping = aes(y = lockdown01,
+                                 x = people_all)) +
+  xlab("Pedestrians and Cyclists") +
+  ylab("Lockdown")+
+  geom_point() +
+  geom_smooth(
+    method = "glm",
+    se = FALSE,
+    method.args = list(family = "binomial")
+  )
+
+
+
+p.covid <- ggarrange(covid.plot,
+                     covid.box,
+                     covid.lr1,
+                     align = "hv",
+                     nrow = 3)
+
+
+p.covid <- annotate_figure(
+  p.covid,
+  top = text_grob(
+    "Pedestrians and cyclists in 2020 compared to covid cases and lockdown",
+    color = "black",
+    face = "bold",
+    size = 14
+  )
+)
+
+p.covid
+
+```
+
 
 # Conclusion
 
