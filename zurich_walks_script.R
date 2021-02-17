@@ -452,6 +452,102 @@ ggplot(zwalks.day.knr, aes(fill=year, x=factor(month, level=month.abb), y=velo_a
   ylab("Total Cyclist") +
   facet_wrap( ~ zones, scales = "free_y")
 
+
+
+
+#############################################################################
+# LOCATION animation weekly
+#############################################################################
+
+# -------------------------- prapare plot --------------------------
+#load Stadtkreise
+zkreis <- st_read("./Stadtkreise/stzh.adm_stadtkreise_v.shp")
+head(zkreis)
+summary(zkreis)
+
+
+#load countingstations
+zstation <- st_read("./Countingstation/taz.view_eco_standorte.shp")
+head(zstation)
+zstation <- cbind(zstation, st_coordinates(zstation))
+summary(zstation)
+
+# Basic colors
+empty_kreis_color = "grey75"
+missing_percentile_color = "grey75"
+basic_color = "lightblue"
+png_output_path = "../png_output/"
+zkreis$color <- basic_color
+
+
+# -------------------------- prapare weekly data --------------------------
+
+### calculate percentile
+zwalks.week.knr <- zwalks.week.knr %>%
+  group_by(knr) %>% 
+  mutate(percrank=(ceiling(percent_rank(difference_people)*10)))
+zwalks.week.knr
+
+### Color Codes for percentiles
+colfunc <- colorRampPalette(c("darkgreen", "red")) #ff9696
+col_list <- colfunc(10)
+plot(rep(1,10),col=col_list,pch=19,cex=3)
+zwalks.week.knr$color = basic_color
+
+## Set colors for percentile
+for (i in 1:nrow(zwalks.week.knr)){
+  current.percentile <- zwalks.week.knr$percrank[i]
+  ### check if percentile is na
+  if(is.na(current.percentile)){
+    ### no percentile value found
+    ### set color to missing_percentile_color
+    zwalks.week.knr$color[i] <- missing_percentile_color
+  } else {
+    ### value is not na, so there should be a percentile
+    ### make sure percentile is a number
+    if(is.numeric(current.percentile)){
+      if(current.percentile == 0){
+        zwalks.week.knr$color[i] <- col_list[1]
+      } else {
+        ### assign color 
+        zwalks.week.knr$color[i] <- col_list[current.percentile]
+      }
+    }
+  }
+}
+
+
+### walk throguh weeks
+for (i_week in 1:5){
+  print(i_week)
+  zwalks.currentweek <- zwalks.week.knr %>% filter(week == i_week)
+  print(zwalks.currentweek)
+  print(zkreis)
+}
+
+
+
+for (i_kreis in 1:nrow(zkreis)){
+  ### reset color to base color in order to avoid missing values not being displayed as last week color
+  zkreis$color[i_kreis] <- basic_color
+  tmp.color$color <- basic_color
+  tmp.color <- zwalks.currentweek  %>% filter(knr == i_kreis)
+  zkreis$color[i_kreis] <- tmp.color$color
+}
+
+
+
+# -------------------------- plot map --------------------------
+
+plot.kreis <- ggplot(zkreis) +
+  geom_sf(size = 1, color = "black", fill= zkreis$color) +
+  geom_sf_text(aes(label = knr), colour = "black") +
+  xlab(tmp_current_date)
+
+plot.station <- plot.kreis 
+plot.station
+
+
 #############################################################################
 # LOCATION animation
 #############################################################################
