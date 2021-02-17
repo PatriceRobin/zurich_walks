@@ -456,8 +456,15 @@ ggplot(zwalks.day.knr, aes(fill=year, x=factor(month, level=month.abb), y=velo_a
 
 
 #############################################################################
-# LOCATION animation weekly
+# LOCATION animation weekly book1
 #############################################################################
+
+
+# create new directory & subdirectory
+ifelse(!dir.exists(file.path("../png_output/")), {dir.create(file.path("../png_output/")); "Directory created"}, "Directory already exists")
+ifelse(!dir.exists(file.path("../png_output/zwalks_week")), {dir.create(file.path("../png_output/zwalks_week")); "Subdirectory created"}, "Subirectory already exists")
+png_output_path = "../png_output/zwalks_week/"
+
 
 # -------------------------- prapare plot --------------------------
 #load Stadtkreise
@@ -517,35 +524,52 @@ for (i in 1:nrow(zwalks.week.knr)){
 }
 
 
-### walk throguh weeks
-for (i_week in 1:5){
-  print(i_week)
+### walk throguh weeks and generate plot image
+for (i_week in 1:53){
+  
+  print(paste("------------------- week: " , toString(i_week)))
   zwalks.currentweek <- zwalks.week.knr %>% filter(week == i_week)
+  ### debug
   print(zwalks.currentweek)
-  print(zkreis)
+  ### assign colors to current week zkreis (zkreis= df to be plotted as a map)
+  for (i_kreis in 1:nrow(zkreis)){
+    ### reset color to base color in order to avoid missing values not being displayed as last week color
+    zkreis$color[i_kreis] <- basic_color
+    
+    tmp.color <- zwalks.currentweek  %>% filter(knr == i_kreis)
+    
+    ### check if data for kreis exists.
+    if(nrow(tmp.color) == 0) {
+      ## kreis dosn't exists. Set color to missing_percentile_color 
+      zkreis$color[i_kreis] <-missing_percentile_color
+    } else {
+      zkreis$color[i_kreis] <-tmp.color$color
+    }
+  }
+  
+  ### debug
+  # print(zkreis)
+  
+  # -------------------------- plot map --------------------------
+  
+  plot.kreis <- ggplot(zkreis) +
+    geom_sf(size = 1, color = "black", fill= zkreis$color) +
+    geom_sf_text(aes(label = knr), colour = "black") +
+    xlab(paste("week: " , toString(i_week)))
+  
+  plot.station <- plot.kreis 
+  print(plot.station)
+  
+  filenmae <- paste( png_output_path , toString(i_week), "_week_zwalks.png" ,  sep = "" )
+  print(filenmae)
+  ggsave(filenmae)
 }
 
 
 
-for (i_kreis in 1:nrow(zkreis)){
-  ### reset color to base color in order to avoid missing values not being displayed as last week color
-  zkreis$color[i_kreis] <- basic_color
-  tmp.color$color <- basic_color
-  tmp.color <- zwalks.currentweek  %>% filter(knr == i_kreis)
-  zkreis$color[i_kreis] <- tmp.color$color
-}
 
 
 
-# -------------------------- plot map --------------------------
-
-plot.kreis <- ggplot(zkreis) +
-  geom_sf(size = 1, color = "black", fill= zkreis$color) +
-  geom_sf_text(aes(label = knr), colour = "black") +
-  xlab(tmp_current_date)
-
-plot.station <- plot.kreis 
-plot.station
 
 
 #############################################################################
@@ -786,13 +810,18 @@ for (i_day_index in 7:nrow(zwalks.summary)){
   
 }  
 
-# -------------------------- create video --------------------------
+#############################################################################
+# Create Video
+#############################################################################
+
 
 file_name<- list.files(path=png_output_path)
 file_path <- paste(png_output_path , file_name,   sep = "" )
 
 file_list <- data.frame(file_name, file_path)
+print(file_list)
 file_list$sort_index = 0
+print(file_list)
 
 
 
@@ -801,15 +830,9 @@ for (i in 1:nrow(file_list)){
 }
 
 file_list_sorted <- arrange(file_list, sort_index)
-
+file_list_sorted
 
 av::av_encode_video(file_list_sorted$file_path, 'zwalks_animation.avi', framerate = 3)
-
-
-
-#############################################################################
-# Video Week
-#############################################################################
 
 
 # create new directory & subdirectory
