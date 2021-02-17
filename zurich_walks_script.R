@@ -171,17 +171,31 @@ plot.months
 
 
 #Months
-ggplot(zwalks.covid, aes(x=factor(month, level=month.name), y=people_all)) +
-  stat_summary(fun = "sum", geom = "bar")+
-  ggtitle("Pedestrian and Bicycles in Zurich through 2020") +
+ggplot(zwalks.covid, aes(fill=year, x=factor(month, level=month.abb), y=people_all)) +
+  geom_bar(position = "dodge", stat="identity") +
+  ggtitle("Pedestrian and Cyclists in Zurich") +
+  xlab("Month") +
+  ylab("Pedestrians and Bicycles")
+
+#Months
+ggplot(zwalks.covid, aes(fill=year, x=factor(month, level=month.abb), y=velo_all)) +
+  geom_bar(position = "dodge", stat="identity") +
+  ggtitle("Cyclists in Zurich") +
   xlab("Month") +
   ylab("Pedestrians and Bicycles")
 
 
+#Months
+ggplot(zwalks.covid, aes(fill=year, x=factor(month, level=month.abb), y=fuss_all)) +
+  geom_bar(position = "dodge", stat="identity") +
+  ggtitle("Pedestrian in Zurich") +
+  xlab("Month") +
+  ylab("Pedestrians and Bicycles")
+
 #Weekdays
-ggplot(zwalks.covid, aes(x=factor(weekday, level=weekday_order), y=people_all)) +
-  stat_summary(fun = "mean", geom = "bar")+
-  ggtitle("Pedestrian and Bicycles in Zurich through 2020") +
+ggplot(zwalks.covid, aes(fill=year, x=factor(weekday, level=weekday_order), y=people_all)) +
+  geom_bar(position = "dodge", stat="identity") +
+  ggtitle("Pedestrian and Bicycles in Zurich through") +
   xlab("Weekday") +
   ylab("Pedestrians and Bicycles")
 
