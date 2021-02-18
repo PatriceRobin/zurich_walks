@@ -734,7 +734,6 @@ ifelse(!dir.exists(file.path("../png_output/zwalks_day")), {dir.create(file.path
 png_output_path = "../png_output/zwalks_day"
 
 
-#zwalks.summary <- filter(zwalks.summary, zwalks.summary$`1` > 0)
 
 
 
