@@ -211,8 +211,10 @@ zwalks.covid[zwalks.covid$date %in% lockdown.1 , ]$lockdown01 <- 1
 
 ```
 
-# Visualization
+# Months
 
+First, we take a closer look at the counted pedestrians and cyclists counted together in 2020 and 2019. A comparison of the monthly data is presented below.
+The top graph below shows the summarized pedestrians and cyclists for each measurement location for the last two years. The two graphs below show the total of measured people for each month in 2019 and 2020 in a direct comparison 
 ```{r month_plots, results="markup"}
 #Aggregated Data - Daily 2019/2020
 p.months1 <- ggplot(zwalks.covid, aes(x=date, y=people_all)) +
@@ -287,6 +289,7 @@ The clear right scewing of the dat is not a surpise, as we had most of the time 
 Additionaly, we take a look at the counted people during the two lockdowns and non-lockdown period. The lockdown boxplot clearly indicates that there is a difference between the counted people during lockdown and during non-lockdown, with fewer people on the street during the two periods of lockdown.
 
 In a third look at the relationship between the recorded cyclists and pedestrians and the two lockdowns by applying a logistic regression. It becomes clear, that the lockdown has indeed a negative impact on the number of recorded people on the street.
+
 ```{r covid_plots, results="markup"}
 ###  Boxplot
 covid.box <-
