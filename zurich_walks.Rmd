@@ -3,7 +3,21 @@ title: "Impact of Covid on Cyclists and Pedestrians in Zurich"
 author: "Patrice.Robin, Patrik.Widmer"
 date: "1 2 2021"
 output: pdf_document
+number_sections: true
+header-includes:
+  - \usepackage[bottom]{footmisc} 
+  - \usepackage{color}
 ---
+
+<!-- %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% -->
+
+\tableofcontents
+
+<!-- %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% -->
+
+<!-- Setting global options (hidden section) -->
+
+<!-- Load packages (hidden section) -->
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE ,
@@ -13,14 +27,6 @@ knitr::opts_chunk$set(echo = FALSE ,
                       )
 
 ```
-
-# Introduction
-
-Covid19 had a huge impact on our society. It changed the way we interact on a professional and social level. Home offices, lockdowns, and partially closed stores have had a particularly severe impact on urban centers.
-
-In this paper, we will examine the impact of the pandemic on the number of pedestrians and bicycles in different areas of Zurich.
-
-The city of Zurich automatically collects data on pedestrians and bicyclists through counting loops installed in the ground in different areas of the city. We can get a clear view of the impact of Covid19 on our daily lives by looking at the data of pedestrians and cyclists in 2020 and comparing it to the previous year.
 
 ```{r load packages}
 # this line of code only runs, if these packages are required
@@ -33,12 +39,31 @@ if (!require(rasterVis)) {install.packages('rasterVis')}
 if (!require(dplyr)) {install.packages('dplyr')}
 if (!require(av)) {install.packages('av')}
 if (!require(ggpubr)) {install.packages('ggpubr')}
+if (!require(gdtools)) {install.packages('gdtools')}
+if (!require(kableExtra)) {install.packages("kableExtra", dependencies = TRUE)}
+if (!require(janitor)) {install.packages("janitor")}
+if (!require(stargazer)) {install.packages("stargazer")}
+
 ```
 
 ```{r english_local}
 #set local working directory to English
 Sys.setlocale("LC_TIME", "English")
 ```
+
+<!-- %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% -->
+
+# Introduction
+
+Covid19 had a huge impact on our society. It changed the way we interact on a professional and social level. Home offices, lockdowns, and partially closed stores have had a particularly severe impact on urban centers.
+
+In this paper, we will examine the impact of the pandemic on the number of pedestrians and bicycles in different areas of Zurich.
+
+The city of Zurich automatically collects data on pedestrians and bicyclists through counting loops installed in the ground in different areas of the city. We can get a clear view of the impact of Covid19 on our daily lives by looking at the data of pedestrians and cyclists in 2020 and comparing it to the previous year.
+
+<!-- %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% -->
+
+<!-- Load data -->
 
 # Data
 
@@ -88,6 +113,8 @@ zkreis <- st_read("./Stadtkreise/stzh.adm_stadtkreise_v.shp")
 #source https://data.stadt-zuerich.ch/dataset/geo_standorte_der_automatischen_fuss__und_vlozaehlungen
 
 zstation <- st_read("./Countingstation/taz.view_eco_standorte.shp")
+zstation <- cbind(zstation, st_coordinates(zstation)) #split coordinates into X and Y
+
 ```
 
 ```{r load_zdistricts}
@@ -138,11 +165,10 @@ zwalks.day <-
 #summarize bicycles and pedestrians
 zwalks.day['fuss_all'] <- zwalks.day$fuss_in + zwalks.day$fuss_out
 zwalks.day['velo_all'] <- zwalks.day$velo_in + zwalks.day$velo_out
-zwalks.day['people_all'] <-
-  zwalks.day$velo_all + zwalks.day$fuss_all
+zwalks.day['people_all'] <- zwalks.day$velo_all + zwalks.day$fuss_all
 ```
 
-In a second step, we join the smoothed Covid data to our daily records of cyclists and pedestrians. Before 01.03.2020 there are no Covid cases.
+In a second step, we join the smoothed Covid data to our daily records of cyclists and pedestrians. Before 01.03.2020 there were no covid cases.
 
 ```{r zwalks_date}
 #add months and weekdays
@@ -191,7 +217,7 @@ zwalks.month.wide <- zwalks.covid.month %>%
               values_from = people_all)
 ```
 
-Based on the information of the Swiss Tourism Federation (2021) we additionally the two lockdowns in 2020. The first lockdown from March 16th 2020 until Mai 11th 2020. The second lockdown starting in 22nd December 2020 and ongoing in the next year.
+Based on the information of the Swiss Tourism Federation (2021) we additionally the two lockdowns in 2020. The first lockdown from March 16th 2020 until Mai 11. 2020. The second lockdown starting in 22. December 2020 and ongoing in the next year.
 
 ```{r}
 ### define lockdown period
@@ -211,10 +237,72 @@ zwalks.covid[zwalks.covid$date %in% lockdown.1 , ]$lockdown01 <- 1
 
 ```
 
-# Months
+## Counting stations
 
-First, we take a closer look at the counted pedestrians and cyclists counted together in 2020 and 2019. A comparison of the monthly data is presented below.
-The top graph below shows the summarized pedestrians and cyclists for each measurement location for the last two years. The two graphs below show the total of measured people for each month in 2019 and 2020 in a direct comparison 
+In the graphic below the counting stations are visualized. The counting stations are not evenly distributed over the twelve districts. The table below shows that district 1 has the most counting stations with a total of 9 and district 7 has no counting stations. We believe that the city of Zurich deliberately selected locations that are highly frequented. Consequently, most counting locations are in the city center or in regional center of Zurich.
+
+A total of 48 different counting location were used to collect the numbers of pedestriand and cyclists during 2019 and 2020.
+```{r counting.stations}
+#plot Stadtkreise and counting stations
+plot.map <- ggplot()+
+  geom_sf(data = zkreis, size = 0, color = "black", fill="lightblue")+
+  geom_sf(data = zzones, size = 0.25, color = "darkgrey", fill="white")
+
+plot.kreis <- plot.map +
+    geom_sf(data = zkreis, size = 1, color = "black", fill= NA )+
+    geom_sf_text(data = zkreis, aes(label = knr), colour = "black", size=10)
+  
+#counting stations  
+plot.station <- plot.kreis + geom_point(data = zstation, aes(x=X, y=Y), size = 3, 
+                                    shape = 23, fill = "red")
+  
+plot.station
+
+
+#join the shape files - left on station
+zstation.kreis <- st_join(zstation, zkreis, 
+                  join = st_within)
+
+
+```
+
+```{r table.stations, results="markup"}
+
+# left Stadtkreise
+counting.stations <- tibble(District = 1:12) %>% #empty tibble with 12 district
+  left_join(zstation.kreis %>% #left join
+  group_by(knr) %>%
+  summarise(length(unique(abkuerzung))) %>%
+  rename("Quantity of Stations" = "length(unique(abkuerzung))"),
+    by = c("District" = "knr"))
+
+counting.stations <- counting.stations[0:2]
+
+counting.stations <- counting.stations %>%
+  adorn_totals("row") 
+
+
+options(knitr.kable.NA = "0")
+
+knitr::kable(counting.stations,
+             align = "cr",
+             caption = "Couting Stations per District") %>%
+  kable_styling(bootstrap_options = "striped") %>%
+  row_spec(7, color = 'red', bold = TRUE)
+
+
+```
+
+# Analysis
+
+In the main chapter, we look at the counted pedestrians and cyclists counted in 2019 and 2020 within the city of Zurich. We look at the distribution over time, the difference between the 12 Stadtkreise, the difference between the zones the counting stations are positioned in, and lastly the impact of the two lockdowns.
+
+## Months
+
+First, we take a closer look at the counted pedestrians and cyclists counted together in 2020 and 2019. A comparison of the monthly data is presented below. The top graph below shows the summarized pedestrians and cyclists for each measurement location for the last two years. The two graphs below show the total of measured people for each month in 2019 and 2020 in a direct comparison.
+
+It is obvious that there were more people on the streets in July, August and September in 2020 than in the previous year. We argue that an explanation are the continuous travel restrictions coming from and going to other countries combined with the eased lockdown within Switzerland.Hence, people spent their holidays at home or simply kept working.
+
 ```{r month_plots, results="markup"}
 #Aggregated Data - Daily 2019/2020
 p.months1 <- ggplot(zwalks.covid, aes(x=date, y=people_all)) +
@@ -271,22 +359,23 @@ plot.months <- annotate_figure(
     color = "black",
     face = "bold",
     size = 14),
-    left = text_grob("Counted Pedestrians and Bicycles",vjust=-.02, color = "black", rot = 90, hjust=0.5)
+    left = text_grob("Counted Pedestrians and Bicycles", color = "black", rot = 90, hjust=0.5)
   )
 
 plot.months
 ```
 
-# Covid and Lockdown
+## 
 
-In the next step we take a look ath how the smoothed covid cases and the counted pedestrians and cyclists are plotted against each other. We only include the counting data from March 1st 2020 until December 31st 2020.
+## Covid and Lockdown
 
-By adding a regression line, we can see that there is a negative correlation between the number of cases and the number of counted people. However, the covnfidence intervall of the trend line is not very accurate and an inexisting confidenceintervall with low covid cases.
+In the next step we take a look at how the smoothed covid cases and the counted pedestrians and cyclists are plotted against each other. We only include the counting data from March 1st 2020 until December 31st 2020.
 
-The clear right scewing of the dat is not a surpise, as we had most of the time below 1000 new covid cases per day. The big variety of recorded people in the street are likely due to whether, temperatures, seasonality but also due to the lockdown. The lockdwon is a political decision on not directly triggered or linked to the number of recorded cases.
+By adding a regression line, we can see that there is a negative correlation between the number of cases and the number of counted people. However, the confidence interval of the trend line is not very accurate and an in existing confidence interval with low covid cases.
 
+The clear right skewing of the data is not a surprise, as we had most of the time below 1000 new covid cases per day. The big variety of recorded people in the street are likely due to whether, temperatures, seasonality but also due to the lockdown. The lockdown is a political decision on not directly triggered or linked to the number of recorded cases.
 
-Additionaly, we take a look at the counted people during the two lockdowns and non-lockdown period. The lockdown boxplot clearly indicates that there is a difference between the counted people during lockdown and during non-lockdown, with fewer people on the street during the two periods of lockdown.
+Additionally, we take a look at the counted people during the two lockdowns and non-lockdown period. The lockdown boxplot clearly indicates that there is a difference between the counted people during lockdown and during non-lockdown, with fewer people on the street during the two periods of lockdown.
 
 In a third look at the relationship between the recorded cyclists and pedestrians and the two lockdowns by applying a logistic regression. It becomes clear, that the lockdown has indeed a negative impact on the number of recorded people on the street.
 
@@ -320,7 +409,7 @@ zwalks.covid.glm <-
   glm(lockdown ~  people_all, family = "binomial",
       data = zwalks.covid %>% filter(date >= "2020-03-01"))
 
-summary(zwalks.covid.glm)
+stargazer(zwalks.covid.glm, title="Regression Results", align=TRUE)
 
 
 ### Plot the Logistic regression
@@ -350,16 +439,22 @@ p.covid <- annotate_figure(
   top = text_grob(
     "Pedestrians and cyclists in 2020 compared to covid cases and lockdown",
     color = "black",
-    face = "bold",
-    size = 14
+    face = "bold"
   )
 )
 
 p.covid
 
 ```
+```{r covid_glm}
+stargazer(zwalks.covid.glm, title="Regression Results", type = 'text')
+```
 
 
 # Conclusion
 
-It would be interesting to quantify the impact of the two lockdown on the number of pedestrians and cyclists statistically. For this we a longer time series than just two years.
+With the mostly visual approach, we could show that the behavior of the people in Zurich changed compared to the previous year. While the impact of the lockdown on the counted people on the streets is no surprise, the clear increase during the summer months was rather unexpected.
+
+The most outstanding part of our visual comparison was the increase of counted cyclists almost through the whole year.
+
+This paper did primarily took a visually based comparison of the number of pedestrians and cyclists in 2019 and 2020 respectively during the two lockdowns in them. For further research, it would be necessary to quantify this identified impact statistically. A longer time series would be necessary to identify and address seasonality and trends in order to identify the impact of covid on the counted people.
