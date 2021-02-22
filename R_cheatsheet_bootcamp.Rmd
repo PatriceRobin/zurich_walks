@@ -43,3 +43,4 @@ janitor::remove_empty()
 ```{r}
 
 ```
+https://www.onceupondata.com/2019/01/25/ggplot2-divergent-bars/
