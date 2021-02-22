@@ -2,8 +2,24 @@
 title: "Impact of Covid on Cyclists and Pedestrians in Zurich"
 author: "Patrice.Robin, Patrik.Widmer"
 date: "1 2 2021"
-output: pdf_document
+output:
+  html_document:
+    df_print: paged
+number_sections: yes
+header-includes:
+- \usepackage[bottom]{footmisc}
+- \usepackage{color}
 ---
+
+<!-- %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% -->
+
+\tableofcontents
+
+<!-- %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% -->
+
+<!-- Setting global options (hidden section) -->
+
+<!-- Load packages (hidden section) -->
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE ,
@@ -13,14 +29,6 @@ knitr::opts_chunk$set(echo = FALSE ,
                       )
 
 ```
-
-# Introduction
-
-Covid19 had a huge impact on our society. It changed the way we interact on a professional and social level. Home offices, lockdowns, and partially closed stores have had a particularly severe impact on urban centers.
-
-In this paper, we will examine the impact of the pandemic on the number of pedestrians and bicycles in different areas of Zurich.
-
-The city of Zurich automatically collects data on pedestrians and bicyclists through counting loops installed in the ground in different areas of the city. We can get a clear view of the impact of Covid19 on our daily lives by looking at the data of pedestrians and cyclists in 2020 and comparing it to the previous year.
 
 ```{r load packages}
 # this line of code only runs, if these packages are required
@@ -33,12 +41,31 @@ if (!require(rasterVis)) {install.packages('rasterVis')}
 if (!require(dplyr)) {install.packages('dplyr')}
 if (!require(av)) {install.packages('av')}
 if (!require(ggpubr)) {install.packages('ggpubr')}
+if (!require(gdtools)) {install.packages('gdtools')}
+if (!require(kableExtra)) {install.packages("kableExtra", dependencies = TRUE)}
+if (!require(janitor)) {install.packages("janitor")}
+if (!require(stargazer)) {install.packages("stargazer")}
+
 ```
 
 ```{r english_local}
 #set local working directory to English
 Sys.setlocale("LC_TIME", "English")
 ```
+
+<!-- %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% -->
+
+# Introduction
+
+Covid19 had a huge impact on our society. It changed the way we interact on a professional and social level. Home offices, lockdowns, and partially closed stores have had a particularly severe impact on urban centers.
+
+In this paper, we will examine the impact of the pandemic on the number of pedestrians and bicycles in different areas of Zurich.
+
+The city of Zurich automatically collects data on pedestrians and bicyclists through counting loops installed in the ground in different areas of the city. We can get a clear view of the impact of Covid19 on our daily lives by looking at the data of pedestrians and cyclists in 2020 and comparing it to the previous year.
+
+<!-- %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% -->
+
+<!-- Load data -->
 
 # Data
 
@@ -88,6 +115,8 @@ zkreis <- st_read("./Stadtkreise/stzh.adm_stadtkreise_v.shp")
 #source https://data.stadt-zuerich.ch/dataset/geo_standorte_der_automatischen_fuss__und_vlozaehlungen
 
 zstation <- st_read("./Countingstation/taz.view_eco_standorte.shp")
+zstation <- cbind(zstation, st_coordinates(zstation)) #split coordinates into X and Y
+
 ```
 
 ```{r load_zdistricts}
@@ -138,11 +167,10 @@ zwalks.day <-
 #summarize bicycles and pedestrians
 zwalks.day['fuss_all'] <- zwalks.day$fuss_in + zwalks.day$fuss_out
 zwalks.day['velo_all'] <- zwalks.day$velo_in + zwalks.day$velo_out
-zwalks.day['people_all'] <-
-  zwalks.day$velo_all + zwalks.day$fuss_all
+zwalks.day['people_all'] <- zwalks.day$velo_all + zwalks.day$fuss_all
 ```
 
-In a second step, we join the smoothed Covid data to our daily records of cyclists and pedestrians. Before 01.03.2020 there are no Covid cases.
+In a second step, we join the smoothed Covid data to our daily records of cyclists and pedestrians. Before 01.03.2020 there were no covid cases.
 
 ```{r zwalks_date}
 #add months and weekdays
@@ -191,7 +219,7 @@ zwalks.month.wide <- zwalks.covid.month %>%
               values_from = people_all)
 ```
 
-Based on the information of the Swiss Tourism Federation (2021) we additionally the two lockdowns in 2020. The first lockdown from March 16th 2020 until Mai 11th 2020. The second lockdown starting in 22nd December 2020 and ongoing in the next year.
+Based on the information of the Swiss Tourism Federation (2021) we additionally the two lockdowns in 2020. The first lockdown from March 16th 2020 until Mai 11. 2020. The second lockdown starting in 22. December 2020 and ongoing in the next year.
 
 ```{r}
 ### define lockdown period
@@ -211,7 +239,72 @@ zwalks.covid[zwalks.covid$date %in% lockdown.1 , ]$lockdown01 <- 1
 
 ```
 
-# Visualization
+## Counting stations
+
+In the graphic below the counting stations are visualized. The counting stations are not evenly distributed over the twelve districts. The table below shows that district 1 has the most counting stations with a total of 9 and district 7 has no counting stations. We believe that the city of Zurich deliberately selected locations that are highly frequented. Consequently, most counting locations are in the city center or in regional center of Zurich.
+
+A total of 48 different counting location were used to collect the numbers of pedestriand and cyclists during 2019 and 2020.
+
+```{r counting.stations}
+#plot Stadtkreise and counting stations
+plot.map <- ggplot()+
+  geom_sf(data = zkreis, size = 0, color = "black", fill="lightblue")+
+  geom_sf(data = zzones, size = 0.25, color = "darkgrey", fill="white")
+
+plot.kreis <- plot.map +
+    geom_sf(data = zkreis, size = 1, color = "black", fill= NA )+
+    geom_sf_text(data = zkreis, aes(label = knr), colour = "black", size=10)
+  
+#counting stations  
+plot.station <- plot.kreis + geom_point(data = zstation, aes(x=X, y=Y), size = 3, 
+                                    shape = 23, fill = "red")
+  
+plot.station
+
+
+#join the shape files - left on station
+zstation.kreis <- st_join(zstation, zkreis, 
+                  join = st_within)
+
+
+```
+
+```{r table.stations, results="markup"}
+
+# left Stadtkreise
+counting.stations <- tibble(District = 1:12) %>% #empty tibble with 12 district
+  left_join(zstation.kreis %>% #left join
+  group_by(knr) %>%
+  summarise(length(unique(abkuerzung))) %>%
+  rename("Quantity of Stations" = "length(unique(abkuerzung))"),
+    by = c("District" = "knr"))
+
+counting.stations <- counting.stations[0:2]
+
+counting.stations <- counting.stations %>%
+  adorn_totals("row") 
+
+
+options(knitr.kable.NA = "0")
+
+knitr::kable(counting.stations,
+             align = "cr",
+             caption = "Couting Stations per District") %>%
+  kable_styling(bootstrap_options = "striped") %>%  #from the kabelExtra package
+  row_spec(7, color = 'red', bold = TRUE) # District 7 has 0 counting stations --> mark red and bold
+
+
+```
+
+# Analysis
+
+In the main chapter, we look at the counted pedestrians and cyclists counted in 2019 and 2020 within the city of Zurich. We look at the distribution over time, the difference between the 12 Stadtkreise, the difference between the zones the counting stations are positioned in, and lastly the impact of the two lockdowns.
+
+## Months
+
+First, we take a closer look at the counted pedestrians and cyclists counted together in 2020 and 2019. A comparison of the monthly data is presented below. The top graph below shows the summarized pedestrians and cyclists for each measurement location for the last two years. The two graphs below show the total of measured people for each month in 2019 and 2020 in a direct comparison.
+
+It is obvious that there were more people on the streets in July, August and September in 2020 than in the previous year. We argue that an explanation are the continuous travel restrictions coming from and going to other countries combined with the eased lockdown within Switzerland.Hence, people spent their holidays at home or simply kept working.
 
 ```{r month_plots, results="markup"}
 #Aggregated Data - Daily 2019/2020
@@ -265,28 +358,28 @@ plot.months <- ggarrange(
 plot.months <- annotate_figure(
   plot.months,
   top = text_grob(
-    "Pedestirans and cyclists in 2019 and 2020",
+    "Pedestrians and cyclists in 2019 and 2020",
     color = "black",
     face = "bold",
     size = 14),
-    left = text_grob("Counted Pedestrians and Bicycles",vjust=-.02, color = "black", rot = 90, hjust=0.5)
+    left = text_grob("Counted Pedestrians and Bicycles", color = "black", rot = 90, hjust=0.5)
   )
 
 plot.months
 ```
 
-# Covid and Lockdown
+## Covid and Lockdown
 
-In the next step we take a look ath how the smoothed covid cases and the counted pedestrians and cyclists are plotted against each other. We only include the counting data from March 1st 2020 until December 31st 2020.
+In the next step we take a look at how the smoothed covid cases and the counted pedestrians and cyclists are plotted against each other. We only include the counting data from March 1st 2020 until December 31st 2020.
 
-By adding a regression line, we can see that there is a negative correlation between the number of cases and the number of counted people. However, the covnfidence intervall of the trend line is not very accurate and an inexisting confidenceintervall with low covid cases.
+By adding a regression line, we can see that there is a negative correlation between the number of cases and the number of counted people. However, the confidence interval of the trend line is not very accurate and an in existing confidence interval with low covid cases.
 
-The clear right scewing of the dat is not a surpise, as we had most of the time below 1000 new covid cases per day. The big variety of recorded people in the street are likely due to whether, temperatures, seasonality but also due to the lockdown. The lockdwon is a political decision on not directly triggered or linked to the number of recorded cases.
+The clear right skewing of the data is not a surprise, as we had most of the time below 1000 new covid cases per day. The big variety of recorded people in the street are likely due to whether, temperatures, seasonality but also due to the lockdown. The lockdown is a political decision on not directly triggered or linked to the number of recorded cases.
 
-
-Additionaly, we take a look at the counted people during the two lockdowns and non-lockdown period. The lockdown boxplot clearly indicates that there is a difference between the counted people during lockdown and during non-lockdown, with fewer people on the street during the two periods of lockdown.
+Additionally, we take a look at the counted people during the two lockdowns and non-lockdown period. The lockdown boxplot clearly indicates that there is a difference between the counted people during lockdown and during non-lockdown, with fewer people on the street during the two periods of lockdown.
 
 In a third look at the relationship between the recorded cyclists and pedestrians and the two lockdowns by applying a logistic regression. It becomes clear, that the lockdown has indeed a negative impact on the number of recorded people on the street.
+
 ```{r covid_plots, results="markup"}
 ###  Boxplot
 covid.box <-
@@ -317,8 +410,6 @@ zwalks.covid.glm <-
   glm(lockdown ~  people_all, family = "binomial",
       data = zwalks.covid %>% filter(date >= "2020-03-01"))
 
-summary(zwalks.covid.glm)
-
 
 ### Plot the Logistic regression
 covid.lr1 <- ggplot(data = zwalks.covid %>% filter(date >= "2020-03-01"),
@@ -347,8 +438,7 @@ p.covid <- annotate_figure(
   top = text_grob(
     "Pedestrians and cyclists in 2020 compared to covid cases and lockdown",
     color = "black",
-    face = "bold",
-    size = 14
+    face = "bold"
   )
 )
 
@@ -356,7 +446,289 @@ p.covid
 
 ```
 
+```{r covid_glm}
+stargazer(zwalks.covid.glm, title="Regression Results", type = 'text') #nice print fo the glm binomial logistic regression
+```
+
+## Living and working zones
+
+In the next step we take a look at the different different zones the counting stations are located in. The counting locations are distributed over 11 different zones types. These zones are defined by the state based on their usage and location. We summarized these zones types into five categories to simplify the analysis.
+
+<!-- summarize zones -->
+
+```{r zones}
+## Bauzonen
+zstation.zones <- st_join(zstation.kreis, zzones,
+                          join = st_within)
+
+head(zstation.zones)
+summary(zstation.zones)
+unique((zstation.zones$typ))
+
+
+zstation.zones["zones"] <- zstation.zones$typ
+
+
+
+zstation.zones$zones[zstation.zones$zones == "W4"] <- "Living" #Viergeschossige  Wohnzone
+zstation.zones$zones[zstation.zones$zones == "W5"] <- "Living" #Fünfgeschossige Wohnzone
+zstation.zones$zones[zstation.zones$zones == "Z6"] <- "Center" #Sechsgeschossige Zentrumszone
+zstation.zones$zones[zstation.zones$zones == "Z5"] <- "Center" #Fünfgeschossige Zentrumszone
+zstation.zones$zones[zstation.zones$zones == "K"] <- "Center" #Kernzone
+zstation.zones$zones[zstation.zones$zones == "F"] <- "Empty/Parking" #Freihaltezone
+zstation.zones$zones[zstation.zones$zones == "FP"] <- "Empty/Parking" #Parking
+zstation.zones$zones[zstation.zones$zones == "WLD"] <- "Recreation" #Wald
+zstation.zones$zones[zstation.zones$zones == "QI"] <- "Recreation" #Quartier Erhaltungszone
+zstation.zones$zones[zstation.zones$zones == "GWS"] <- "Recreation" #Gewässer
+zstation.zones$zones[zstation.zones$zones == "IG I"] <- "Industry" #Industrie
+```
+
+<!--Zone plots -->
+
+```{r tables_zones, results="markup"}
+table.zones.typ <- zstation.zones %>%
+  group_by(typ, zones) %>%
+  summarise(length(unique(abkuerzung))) %>%
+  rename("Quantity of Stations" = "length(unique(abkuerzung))") %>%
+  arrange(desc(zones))
+
+#nice table on the counting stations per zone
+knitr::kable(table.zones.typ[0:3],
+             align = "cr",
+             caption = "Counting Stations per zone") %>%
+  kable_styling(bootstrap_options = "striped") #from the kabelExtra package
+
+table.zones <- zstation.zones %>%
+  group_by(zones) %>%
+  summarise(length(unique(abkuerzung))) %>%
+  rename("Quantity of Stations" = "length(unique(abkuerzung))") %>%
+  arrange(desc(zones))
+
+
+knitr::kable(table.zones[0:2],
+             align = "cr",
+             caption = "Summarized Zones") %>%
+  kable_styling(bootstrap_options = "striped") #from the kabelExtra package
+```
+
+<!-- Creatre one dataframe with all the information -->
+
+```{r zwalks.difference}
+#join everything into one table
+zwalks.day.knr <- zwalks.day %>% left_join (dplyr::select(zstation.zones,
+                                                fk_zaehler,
+                                                knr,
+                                                kname,
+                                                zones),
+                                            by = "fk_zaehler")
+
+
+
+#pivot wide table -- week zones
+zwalks.week.zones <- zwalks.day.knr %>%
+  group_by(year, week, zones) %>%
+  summarize(people_sum = sum(people_all))
+
+
+zwalks.week.zones <- zwalks.week.zones %>%
+  pivot_wider(names_from = year,
+              values_from = people_sum)
+
+zwalks.week.zones["difference_people"] <- zwalks.week.zones['2020'] - zwalks.week.zones['2019'] 
+
+
+
+#pivot wide table -- weekly
+zwalks.week.knr <- zwalks.day.knr %>%
+  group_by(year, week, knr) %>%
+  summarize(people_sum = sum(people_all))
+
+
+zwalks.week.knr <- zwalks.week.knr %>%
+  pivot_wider(names_from = year,
+              values_from = people_sum)
+
+
+#difference between the 2020 and 2019
+zwalks.week.knr["difference_people"] <- zwalks.week.knr['2020'] - zwalks.week.knr['2019'] 
+```
+
+As shown in the five plots below, the pandemic had a different impact on the different zones. Recreational zones and industrial zones counted higher numbers of people while Empty/Parking zones and Living zones where less frequently visited by people on foot or bicycle.
+
+Except of the industry zones, the impact of the Lockdown is especially clear visible in March in all the zones. The lockdown effect seem to be vanishin in April and Mai.
+
+```{r plot_zones, results="markup", fig.width = 12, fig.height = 6}
+#People per Zone
+ggplot(zwalks.day.knr, aes(fill=year, x=factor(month, level=month.abb), y=people_all)) +
+  geom_bar(position = "dodge", stat="identity") +
+  ggtitle("Pedestrians and cyclists in the different zones") +
+  xlab("Month") +
+  ylab("Total Cyclist") +
+  facet_wrap( ~ zones, scales = "free_y") +
+  theme(axis.text.x = element_text(angle = 45))+
+  theme(legend.position = 'bottom')
+```
+
+## City Districts
+
+In the last analysis part, we take a closer look at the twelve city districts. The twelve plots below show a comparison between 2020 and 2019 in the twelve districts. It seems that we are missing some measurements in district twelve for two months and district seven is missing completly as explained before.
+
+Nevertheless, there are certain differences visible between the districts. District 1 and district 9 are hardest hit by the pandemic and the ongoing shift to home office. District 4, 8, and 12 seem to be more frequently visited by people on foot and bycicle during the pandemic. Our guess is that these districts have several free and open recreational areas. To test this statement, we would need additional information.
+
+```{r plot_twelve_districts, results="markup", fig.width = 12, fig.height = 6}
+ggplot(zwalks.day.knr, aes(fill=year, x=factor(month, level=month.abb), y=people_all)) +
+  geom_bar(position = "dodge", stat="identity") +
+  ggtitle("Pedestrians and cyclists in the districts ") +
+  xlab("Month") +
+  ylab("Total People") +
+  facet_wrap( ~ knr, scales = "free_y")+
+  theme(axis.text.x = element_text(angle = 45)) +
+  labs(fill = "Year")+
+  theme(legend.position = 'bottom')
+
+```
+
+In a second pair of plots, we only subtract the counted people in 2019 from the ones in 2020. Hence, the positive values indicate more counted people in 2020 and the negative show us when we counted more in 2019. Thhe numbers are presented on a weekly basis. We recommend to use both sets of plots to look at the differences between the two years to get the full picture. So seems that district 11 was heavily impacted by the pandemic, but when look at the number in the upper plot it becomes clear that there were just slightly less pedestrians and cyclists in the road throughout 2020.
+
+```{r plot_difference, results="markup", fig.width = 10, fig.height = 4}
+ 
+ggplot(zwalks.week.knr, aes(fill = difference_people>0, x=week, y=difference_people)) +
+  geom_bar(position = "dodge", stat = "identity", alpha = 0.5)+
+  ggtitle("Pedestrians and cyclists in the districts") +
+  xlab("Week") +
+  ylab("Total People") +
+  facet_wrap( ~ knr, scales = "free_y")+
+  theme(axis.text.x = element_text(angle = 45))+
+  scale_fill_discrete(name = "People: 2020-2019", labels = c("More in 2019", "More in 2020", "No countings"))+
+  theme(legend.position = 'bottom')
+```
+
+# Video
+
+In a last step we decided to create a short clip showing the difference of counted pedestrians and cyclists in 2020
+
+<video controls>
+
+<source src="/zwalks_animation.avi" type="video/avi">
+
+</video>
+```{r}
+#############################################################################
+# LOCATION animation weekly book1
+#############################################################################
+
+
+# create new directory & subdirectory
+ifelse(!dir.exists(file.path("../png_output/")), {dir.create(file.path("../png_output/")); "Directory created"}, "Directory already exists")
+png_output_path = "../png_output/"
+
+
+# -------------------------- prapare plot --------------------------
+#load Stadtkreise
+zkreis <- st_read("./Stadtkreise/stzh.adm_stadtkreise_v.shp")
+head(zkreis)
+summary(zkreis)
+
+
+#load countingstations
+zstation <- st_read("./Countingstation/taz.view_eco_standorte.shp")
+head(zstation)
+zstation <- cbind(zstation, st_coordinates(zstation))
+summary(zstation)
+
+# Basic colors
+empty_kreis_color = "grey75"
+missing_percentile_color = "grey75"
+basic_color = "lightblue"
+png_output_path = "../png_output/"
+zkreis$color <- basic_color
+
+
+# -------------------------- prapare weekly data --------------------------
+
+### calculate percentile
+zwalks.week.knr <- zwalks.week.knr %>%
+  group_by(knr) %>% 
+  mutate(percrank=(ceiling(percent_rank(difference_people)*10)))
+zwalks.week.knr
+
+### Color Codes for percentiles
+colfunc <- colorRampPalette(c("darkgreen", "red")) #ff9696
+col_list <- colfunc(10)
+plot(rep(1,10),col=col_list,pch=19,cex=3)
+zwalks.week.knr$color = basic_color
+
+## Set colors for percentile
+for (i in 1:nrow(zwalks.week.knr)){
+  current.percentile <- zwalks.week.knr$percrank[i]
+  ### check if percentile is na
+  if(is.na(current.percentile)){
+    ### no percentile value found
+    ### set color to missing_percentile_color
+    zwalks.week.knr$color[i] <- missing_percentile_color
+  } else {
+    ### value is not na, so there should be a percentile
+    ### make sure percentile is a number
+    if(is.numeric(current.percentile)){
+      if(current.percentile == 0){
+        zwalks.week.knr$color[i] <- col_list[1]
+      } else {
+        ### assign color 
+        zwalks.week.knr$color[i] <- col_list[current.percentile]
+      }
+    }
+  }
+}
+
+
+### walk throguh weeks and generate plot image
+for (i_week in 1:53){
+  
+  print(paste("------------------- week: " , toString(i_week)))
+  zwalks.currentweek <- zwalks.week.knr %>% filter(week == i_week)
+  ### debug
+  print(zwalks.currentweek)
+  ### assign colors to current week zkreis (zkreis= df to be plotted as a map)
+  for (i_kreis in 1:nrow(zkreis)){
+    ### reset color to base color in order to avoid missing values not being displayed as last week color
+    zkreis$color[i_kreis] <- basic_color
+    
+    tmp.color <- zwalks.currentweek  %>% filter(knr == i_kreis)
+    
+    ### check if data for kreis exists.
+    if(nrow(tmp.color) == 0) {
+      ## kreis dosn't exists. Set color to missing_percentile_color 
+      zkreis$color[i_kreis] <-missing_percentile_color
+    } else {
+      zkreis$color[i_kreis] <-tmp.color$color
+    }
+  }
+  
+  ### debug
+  # print(zkreis)
+  
+  # -------------------------- plot map --------------------------
+  
+  plot.kreis <- ggplot(zkreis) +
+    geom_sf(size = 1, color = "black", fill= zkreis$color) +
+    geom_sf_text(aes(label = knr), colour = "black") +
+    xlab(paste("week: " , toString(i_week)))
+  
+  plot.station <- plot.kreis 
+  print(plot.station)
+  
+  filenmae <- paste( png_output_path , toString(i_week), "_week_zwalks.png" ,  sep = "" )
+  print(filenmae)
+  ggsave(filenmae)
+}
+
+
+```
 
 # Conclusion
 
-It would be interesting to quantify the impact of the two lockdown on the number of pedestrians and cyclists statistically. For this we a longer time series than just two years.
+With the mostly visual approach, we could show that the behavior of the people in Zurich changed compared to the previous year. While the impact of the lockdown on the counted people on the streets is no surprise, the clear increase during the summer months was rather unexpected.
+
+The most outstanding part of our visual comparison was the increase of counted cyclists almost through the whole year.
+
+This paper did primarily took a visually based comparison of the number of pedestrians and cyclists in 2019 and 2020 respectively during the two lockdowns in them. For further research, it would be necessary to quantify this identified impact statistically. A longer time series would be necessary to identify and address seasonality and trends in order to identify the impact of covid on the counted people.
