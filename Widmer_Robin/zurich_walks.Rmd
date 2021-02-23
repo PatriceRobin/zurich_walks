@@ -539,7 +539,7 @@ zwalks.day.knr <- zwalks.day %>% left_join (dplyr::select(zstation.zones,
 
 
 
-# pivot wide table -- week zones
+# group by-- week zones
 zwalks.week.zones <- zwalks.day.knr %>%
   group_by(year, week, zones) %>%
   summarize(people_sum = sum(people_all))
@@ -603,7 +603,7 @@ ggplot(zwalks.week.knr, aes(fill = difference_people>0, x=week, y=difference_peo
   ylab("Total People") +
   facet_wrap( ~ knr, scales = "free_y")+
   theme(axis.text.x = element_text(angle = 45))+
-  scale_fill_discrete(name = "Peop§le: 2020-2019", labels = c("More in 2019", "More in 2020", "No countings"))+
+  scale_fill_discrete(name = "People: 2020-2019", labels = c("More in 2019", "More in 2020", "No countings"))+
   theme(legend.position = 'bottom')
 ```
 
