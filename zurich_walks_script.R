@@ -1,6 +1,7 @@
 #############################################################################
 #load packages
 #############################################################################
+
 if (!require(tidyverse)) {install.packages('"tidyverse"')}
 if (!require(ggplot2)) {install.packages('ggplot2')}
 if (!require(scales)) {install.packages('scales')}
@@ -10,8 +11,10 @@ if (!require(rasterVis)) {install.packages('rasterVis')}
 if (!require(dplyr)) {install.packages('dplyr')}
 if (!require(av)) {install.packages('av')}
 if (!require(ggpubr)) {install.packages('ggpubr')}
-
-
+if (!require(gdtools)) {install.packages('gdtools')}
+if (!require(kableExtra)) {install.packages("kableExtra", dependencies = TRUE)}
+if (!require(janitor)) {install.packages("janitor")}
+if (!require(stargazer)) {install.packages("stargazer")}
 
 
 Sys.setlocale("LC_TIME", "English")
@@ -314,6 +317,7 @@ ggplot(mapping = aes(y = zwalks.day$people_all,
 #load Stadtkreise
 #source https://data.stadt-zuerich.ch/dataset/geo_stadtkreise
 zkreis <- st_read("./Stadtkreise/stzh.adm_stadtkreise_v.shp")
+
 head(zkreis)
 summary(zkreis)
 
@@ -524,10 +528,27 @@ for (i in 1:nrow(zwalks.week.knr)){
 }
 
 
+
+
+
 ### walk throguh weeks and generate plot image
+tmp_current_date <- as.Date("2020-01-01")
 for (i_week in 1:53){
-  
-  print(paste("------------------- week: " , toString(i_week)))
+  print(i_week)
+  if(i_week ==1){
+    tmp_current_date <- as.Date("2020-01-01")
+  } else if (i_week == 2){
+    tmp_current_date <- as.Date("2020-01-06")
+  } else {
+    tmp_current_date <- (tmp_current_date + 7)
+  }
+  print(tmp_current_date)
+    
+  ## bookpat
+  print(i)
+  print(paste("current week: " , toString(i_week)))
+
+
   zwalks.currentweek <- zwalks.week.knr %>% filter(week == i_week)
   ### debug
   print(zwalks.currentweek)
@@ -555,12 +576,53 @@ for (i_week in 1:53){
   plot.kreis <- ggplot(zkreis) +
     geom_sf(size = 1, color = "black", fill= zkreis$color) +
     geom_sf_text(aes(label = knr), colour = "black") +
-    xlab(paste("week: " , toString(i_week)))
+    xlab(paste("Date: " , (tmp_current_date)))
   
   plot.station <- plot.kreis 
-  print(plot.station)
   
-  filenmae <- paste( png_output_path , toString(i_week), "_week_zwalks.png" ,  sep = "" )
+  
+  ### Plot COVID Cases
+  min_date_on_plot <- "2020-03-1"
+  if(as.Date(tmp_current_date) > as.Date(min_date_on_plot)) {
+    date_plot_end <- tmp_current_date
+    print("date is larger")
+  } else {
+    date_plot_end <-toString(tmp_current_date)
+    date_plot_end <- min_date_on_plot
+    print("date is smaller")
+  }
+  
+  # -------------------------- plot covid cases --------------------------
+  ### Plot COVID Cases
+  min_date_on_plot <- "2020-01-06"
+  if(as.Date(tmp_current_date) > as.Date(min_date_on_plot)) {
+    date_plot_end <- tmp_current_date
+    print("date is larger")
+  } else {
+    date_plot_end <-toString(tmp_current_date)
+    date_plot_end <- min_date_on_plot
+    print("date is smaller")
+  }
+  
+  
+  covid.daterange<- filter(covid, between(covid$date, as.Date("2020-01-01"), as.Date(toString(date_plot_end))))
+  #covid.daterange<- filter(covid, between(covid$date, as.Date("2020-01-01"), as.Date("2020-04-01")))
+  print(covid.daterange$date)
+  print(covid.daterange$new_cases_smoothed)
+  
+  p.covid <- ggplot(covid.daterange, aes(x=date, y=new_cases_smoothed)) +
+    geom_line(color="green", size=0.7) + 
+    ggtitle("COVID Cases") +
+    ylab("") + 
+    xlab("")
+  #print(p.covid)
+  
+  ### Arrange multiple plots in one figure
+  plot.arranged <- ggarrange(plot.station, p.covid , heights = c(2, 0.7),
+                             ncol = 1, nrow = 2)
+  print(plot.arranged )
+  
+  filenmae <- paste( png_output_path , '/', toString(i_week), "_week_zwalks.png" ,  sep = "" )
   print(filenmae)
   ggsave(filenmae)
 }
@@ -574,7 +636,7 @@ for (i_week in 1:53){
 
 
 file_name<- list.files(path=png_output_path)
-file_path <- paste(png_output_path , file_name,   sep = "" )
+file_path <- paste(png_output_path , '/', file_name,   sep = "" )
 
 file_list <- data.frame(file_name, file_path)
 print(file_list)
@@ -590,7 +652,7 @@ for (i in 1:nrow(file_list)){
 file_list_sorted <- arrange(file_list, sort_index)
 file_list_sorted
 
-av::av_encode_video(file_list_sorted$file_path, 'zwalks_animation.avi', framerate = 3)
+av::av_encode_video(file_list_sorted$file_path, 'zwalks_animation.avi', framerate = 2)
 
 
 # create new directory & subdirectory

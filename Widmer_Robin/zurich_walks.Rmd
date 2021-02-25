@@ -123,13 +123,14 @@ zstation <- cbind(zstation, st_coordinates(zstation)) # split coordinates into X
 ```{r load_zdistricts}
 # Districts
 # source: https://data.stadt-zuerich.ch/dataset/ktzh_quartieranalyse
-zdistricts <- st_read("./Quartieranalyse/QUARTIERE_F.shp")
+zdistricts <- st_read("./Data/Quartieranalyse/QUARTIERE_F.shp")
+
 ```
 
 ```{r load_zzones}
 # Bauzonen
 # sources https://data.stadt-zuerich.ch/dataset/geo_nutzungsplanung___kommunale_bau__und_zonenordnung__bzo__jahresendstand_2020
-zzones <- st_read("./Bauzonen/afs.bzo_zone_v.shp")
+zzones <- st_read("./Data/Bauzonen/afs.bzo_zone_v.shp")
 ```
 
 ## Preparation
@@ -593,31 +594,18 @@ ggplot(zwalks.day.knr, aes(fill=year, x=factor(month, level=month.abb), y=people
 
 In a second pair of plots, we only subtract the counted people in 2019 from the ones in 2020. Hence, the positive values indicate more counted people in 2020 and the negative show us when we counted more in 2019. Thhe numbers are presented on a weekly basis. We recommend to use both sets of plots to look at the differences between the two years to get the full picture. So seems that district 11 was heavily impacted by the pandemic, but when look at the number in the upper plot it becomes clear that there were just slightly less pedestrians and cyclists in the road throughout 2020.
 
-```{r plot_difference, results="markup", fig.width = 10, fig.height = 4}
-# plot difference of people in the districts -- weekly
-
-ggplot(zwalks.week.knr, aes(fill = difference_people>0, x=week, y=difference_people)) +
-  geom_bar(position = "dodge", stat = "identity", alpha = 0.5)+
-  ggtitle("Pedestrians and cyclists in the districts") +
-  xlab("Week") +
-  ylab("Total People") +
-  facet_wrap( ~ knr, scales = "free_y")+
-  theme(axis.text.x = element_text(angle = 45))+
-  scale_fill_discrete(name = "People: 2020-2019", labels = c("More in 2019", "More in 2020", "No countings"))+
-  theme(legend.position = 'bottom')
-```
 
 # Video
 
-In a last step we decided to create a short clip showing the difference of counted pedestrians and cyclists in 2020
+In a last step, we decided to animate the difference in pedestrians and cyclists counted in 2020 compared to 2019 across time. For each month of 2020, we generate a color coded map. Dark green areas show that fewer pedestrians and bicyclists were counted compared to the previous year.In contrast, dark red areas show that more pedestrians and bicyclists where counted.  This plot is combined with a second graph showing the number of COVID cases counted. If you look at zwalks_animation.avi, you can see how the COVID pandemic unfolds and how the number of pedestrians decreases as COVID cases rise.  
 
-```{r}
+```{r plot_video, results="markup", fig.width = 10, fig.height = 4}
 # -------------------------- animated video --------------------------
 
 # create new directory & subdirectory
-ifelse(!dir.exists(file.path("./Video/")), {dir.create(file.path("./Video/")); "Directory created"}, "Directory already exists")
-ifelse(!dir.exists(file.path("./Video/png_output/")), {dir.create(file.path("./Video/png_output/")); "Subdirectory created"}, "Subirectory already exists")
-png_output_path = "./Video/png_output/"
+ifelse(!dir.exists(file.path("../png_output/")), {dir.create(file.path("../png_output/")); "Directory created"}, "Directory already exists")
+ifelse(!dir.exists(file.path("../png_output/zwalks_week")), {dir.create(file.path("../png_output/zwalks_week")); "Subdirectory created"}, "Subirectory already exists")
+png_output_path = "../png_output/zwalks_week/"
 
 
 # -------------------------- prapare plot --------------------------
@@ -637,11 +625,11 @@ summary(zstation)
 empty_kreis_color = "grey75"
 missing_percentile_color = "grey75"
 basic_color = "lightblue"
-png_output_path = "./Video/png_output/"
+png_output_path = "../png_output/"
 zkreis$color <- basic_color
 
 
-# -------------------------- prepare weekly data --------------------------
+# -------------------------- prapare weekly data --------------------------
 
 ### calculate percentile
 zwalks.week.knr <- zwalks.week.knr %>%
@@ -678,10 +666,27 @@ for (i in 1:nrow(zwalks.week.knr)){
 }
 
 
+
+
+
 ### walk throguh weeks and generate plot image
+tmp_current_date <- as.Date("2020-01-01")
 for (i_week in 1:53){
-  
-  print(paste("------------------- week: " , toString(i_week)))
+  print(i_week)
+  if(i_week ==1){
+    tmp_current_date <- as.Date("2020-01-01")
+  } else if (i_week == 2){
+    tmp_current_date <- as.Date("2020-01-06")
+  } else {
+    tmp_current_date <- (tmp_current_date + 7)
+  }
+  print(tmp_current_date)
+    
+  ## bookpat
+  print(i)
+  print(paste("current week: " , toString(i_week)))
+
+
   zwalks.currentweek <- zwalks.week.knr %>% filter(week == i_week)
   ### debug
   print(zwalks.currentweek)
@@ -709,12 +714,53 @@ for (i_week in 1:53){
   plot.kreis <- ggplot(zkreis) +
     geom_sf(size = 1, color = "black", fill= zkreis$color) +
     geom_sf_text(aes(label = knr), colour = "black") +
-    xlab(paste("week: " , toString(i_week)))
+    xlab(paste("Date: " , (tmp_current_date)))
   
   plot.station <- plot.kreis 
-  print(plot.station)
   
-  filenmae <- paste( png_output_path , toString(i_week), "_week_zwalks.png" ,  sep = "" )
+  
+  ### Plot COVID Cases
+  min_date_on_plot <- "2020-03-1"
+  if(as.Date(tmp_current_date) > as.Date(min_date_on_plot)) {
+    date_plot_end <- tmp_current_date
+    print("date is larger")
+  } else {
+    date_plot_end <-toString(tmp_current_date)
+    date_plot_end <- min_date_on_plot
+    print("date is smaller")
+  }
+  
+  # -------------------------- plot covid cases --------------------------
+  ### Plot COVID Cases
+  min_date_on_plot <- "2020-01-06"
+  if(as.Date(tmp_current_date) > as.Date(min_date_on_plot)) {
+    date_plot_end <- tmp_current_date
+    print("date is larger")
+  } else {
+    date_plot_end <-toString(tmp_current_date)
+    date_plot_end <- min_date_on_plot
+    print("date is smaller")
+  }
+  
+  
+  covid.daterange<- filter(covid, between(covid$date, as.Date("2020-01-01"), as.Date(toString(date_plot_end))))
+  #covid.daterange<- filter(covid, between(covid$date, as.Date("2020-01-01"), as.Date("2020-04-01")))
+  print(covid.daterange$date)
+  print(covid.daterange$new_cases_smoothed)
+  
+  p.covid <- ggplot(covid.daterange, aes(x=date, y=new_cases_smoothed)) +
+    geom_line(color="green", size=0.7) + 
+    ggtitle("COVID Cases") +
+    ylab("") + 
+    xlab("")
+  #print(p.covid)
+  
+  ### Arrange multiple plots in one figure
+  plot.arranged <- ggarrange(plot.station, p.covid , heights = c(2, 0.7),
+                             ncol = 1, nrow = 2)
+  print(plot.arranged )
+  
+  filenmae <- paste( png_output_path , '/', toString(i_week), "_week_zwalks.png" ,  sep = "" )
   print(filenmae)
   ggsave(filenmae)
 }
@@ -722,10 +768,13 @@ for (i_week in 1:53){
 
 
 
-# -------------------------- output video --------------------------
+#############################################################################
+# Create Video
+#############################################################################
+
 
 file_name<- list.files(path=png_output_path)
-file_path <- paste(png_output_path , file_name,   sep = "" )
+file_path <- paste(png_output_path , '/', file_name,   sep = "" )
 
 file_list <- data.frame(file_name, file_path)
 print(file_list)
@@ -741,7 +790,13 @@ for (i in 1:nrow(file_list)){
 file_list_sorted <- arrange(file_list, sort_index)
 file_list_sorted
 
-av::av_encode_video(file_list_sorted$file_path, './Video/Zurich_Walks_Animation.avi', framerate = 3)
+av::av_encode_video(file_list_sorted$file_path, 'zwalks_animation.avi', framerate = 2)
+
+
+# create new directory & subdirectory
+ifelse(!dir.exists(file.path("../png_output/")), {dir.create(file.path("../png_output/")); "Directory created"}, "Directory already exists")
+ifelse(!dir.exists(file.path("../png_output/zwalks_week")), {dir.create(file.path("../png_output/zwalks_week")); "Subdirectory created"}, "Subirectory already exists")
+png_output_path = "../png_output/zwalks_week"
 
 ```
 
