@@ -622,7 +622,7 @@ In a second pair of plots, we only subtract the counted people in 2019 from the 
 
 In a last step, we decided to animate the difference in pedestrians and cyclists counted in 2020 compared to 2019 across time. For each month of 2020, we generate a color coded map. Dark green areas show that fewer pedestrians and bicyclists were counted compared to the previous year.In contrast, dark red areas show that more pedestrians and bicyclists where counted. This plot is combined with a second graph showing the number of COVID cases counted. If you look at zwalks_animation.avi, you can see how the COVID pandemic unfolds and how the number of pedestrians decreases as COVID cases rise.
 
-```{r create_video, fig.show='hide', eval=FALSE}
+```{r create_video, fig.show='hide'}
 # -------------------------- animated video --------------------------
 
 # create new directory & subdirectory
