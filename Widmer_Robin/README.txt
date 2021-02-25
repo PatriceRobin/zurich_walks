@@ -11,6 +11,7 @@ All the relevant data are in the Widmer_Robin.zip folder:
 - All the used data is saved in the Data subfolder.
 - The created animation zurich_walks_animation.avi is in the Video folder.
 - The pngs that are used are in the png_output subfolder within the Video folder.
+- The sources for the used R-packages are named packages.bib and can be found in the Sources folder
 
 When running the zurich_walks.rmd file, some additional summaries and plots are created that are not included in the knitted html file.
 Additionally, the png files for the video, the video itself, and if necessary, the video folder will be newly created, when running or knitting the zurich_walks.rmd file.

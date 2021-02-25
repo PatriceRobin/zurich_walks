@@ -1,14 +1,14 @@
 ---
 title: "Impact of Covid on Cyclists and Pedestrians in Zurich"
-author: "Patrice.Robin, Patrik.Widmer"
-date: "1 2 2021"
+author: "Patrice Robin, Patrik Widmer"
+date: "25.05.2021"
 output:
   html_document:
-    df_print: paged
-number_sections: yes
-header-includes:
-- \usepackage[bottom]{footmisc}
-- \usepackage{color}
+    toc: true # table of content true
+    toc_depth: 3  # upto three depths of headings (specified by #, ## and ###)
+    number_sections: true  ## if you want number sections at each table
+bibliography: "./Sources/packages.bib"
+nocite: '@*'
 ---
 
 <!-- %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% -->
@@ -46,6 +46,10 @@ if (!require(gdtools)) {install.packages('gdtools')}
 if (!require(kableExtra)) {install.packages("kableExtra", dependencies = TRUE)}
 if (!require(janitor)) {install.packages("janitor")}
 if (!require(stargazer)) {install.packages("stargazer")}
+if (!require(vembedr)) {install.packages("vembedr")}
+if (!require(rmarkdown)) {install.packages("rmarkdown")}
+if (!require(devtools)) {install.packages("devtools")}
+if (!require(usethis)) {install.packages("usethis")}
 
 ```
 
@@ -70,7 +74,7 @@ The city of Zurich automatically collects data on pedestrians and bicyclists thr
 
 # Data
 
-All the data regarding Zurich are pulled from the official website of the city of Zurich *Open Data Stadt Zürich*. The fallowing information are used in this paper:
+All the data regarding Zurich are pulled from the official website of the city of Zurich *Open Data Stadt Zürich* (2021). The fallowing information are used in this paper:
 
 -   Number of pedestrians and bicycles counted in 2020 and 2019
 
@@ -467,6 +471,7 @@ stargazer(zwalks.covid.glm, title="Regression Results", type = 'text') # nice pr
 In the next step we take a look at the different different zones the counting stations are located in. The counting locations are distributed over 11 different zones types. These zones are defined by the state based on their usage and location. We summarized these zones types into five categories to simplify the analysis.
 
 <!-- summarize zones -->
+
 ```{r zones}
 # -------------------------- Zones --------------------------
 ### Bauzonen / usage and location zones
@@ -497,7 +502,7 @@ zstation.zones$zones[zstation.zones$zones == "IG I"] <- "Industry" # Industrie
 ```
 
 <!--Zone plots -->
-
+ 
 ```{r tables_zones, results="markup"}
 ### table with zones, type and counting stations
 table.zones.typ <- zstation.zones %>%
@@ -506,22 +511,27 @@ table.zones.typ <- zstation.zones %>%
   rename("Quantity of Stations" = "length(unique(abkuerzung))") %>%
   arrange(desc(zones))
 
+
 # nice table on the counting stations per zone
-knitr::kable(table.zones.typ[0:3],
+knitr::kable(st_drop_geometry(table.zones.typ), #remove geometry
              align = "cr",
              caption = "Counting Stations per zone") %>%
   kable_styling(bootstrap_options = "striped") # from the kabelExtra package
 
 
+
+
 ### table with only the zones
+
 table.zones <- zstation.zones %>%
   group_by(zones) %>%
   summarise(length(unique(abkuerzung))) %>%
   rename("Quantity of Stations" = "length(unique(abkuerzung))") %>%
   arrange(desc(zones))
 
+#remove geometry
 
-knitr::kable(table.zones[0:2],
+knitr::kable(st_drop_geometry(table.zones),
              align = "cr",
              caption = "Summarized Zones") %>%
   kable_styling(bootstrap_options = "striped") # from the kabelExtra package
@@ -608,12 +618,11 @@ ggplot(zwalks.day.knr, aes(fill=year, x=factor(month, level=month.abb), y=people
 
 In a second pair of plots, we only subtract the counted people in 2019 from the ones in 2020. Hence, the positive values indicate more counted people in 2020 and the negative show us when we counted more in 2019. Thhe numbers are presented on a weekly basis. We recommend to use both sets of plots to look at the differences between the two years to get the full picture. So seems that district 11 was heavily impacted by the pandemic, but when look at the number in the upper plot it becomes clear that there were just slightly less pedestrians and cyclists in the road throughout 2020.
 
-
 # Video
 
-In a last step, we decided to animate the difference in pedestrians and cyclists counted in 2020 compared to 2019 across time. For each month of 2020, we generate a color coded map. Dark green areas show that fewer pedestrians and bicyclists were counted compared to the previous year.In contrast, dark red areas show that more pedestrians and bicyclists where counted.  This plot is combined with a second graph showing the number of COVID cases counted. If you look at zwalks_animation.avi, you can see how the COVID pandemic unfolds and how the number of pedestrians decreases as COVID cases rise.  
+In a last step, we decided to animate the difference in pedestrians and cyclists counted in 2020 compared to 2019 across time. For each month of 2020, we generate a color coded map. Dark green areas show that fewer pedestrians and bicyclists were counted compared to the previous year.In contrast, dark red areas show that more pedestrians and bicyclists where counted. This plot is combined with a second graph showing the number of COVID cases counted. If you look at zwalks_animation.avi, you can see how the COVID pandemic unfolds and how the number of pedestrians decreases as COVID cases rise.
 
-```{r create_video, fig.show='hide'}
+```{r create_video, fig.show='hide', eval=FALSE}
 # -------------------------- animated video --------------------------
 
 # create new directory & subdirectory
@@ -805,6 +814,14 @@ av::av_encode_video(file_list_sorted$file_path, './Video/zurich_walks_video.avi'
 
 ```
 
+```{r vimeo_url}
+suggest_embed("https://vimeo.com/516652769")
+```
+
+```{r vimeo_link, results="asis"}
+embed_vimeo("516652769")
+```
+
 # Conclusion
 
 With the mostly visual approach, we could show that the behavior of the people in Zurich changed compared to the previous year. While the impact of the lockdown on the counted people on the streets is no surprise, the clear increase during the summer months was rather unexpected.
@@ -812,3 +829,25 @@ With the mostly visual approach, we could show that the behavior of the people i
 The most outstanding part of our visual comparison was the increase of counted cyclists almost through the whole year.
 
 This paper did primarily took a visually based comparison of the number of pedestrians and cyclists in 2019 and 2020 respectively during the two lockdowns in them. For further research, it would be necessary to quantify this identified impact statistically. A longer time series would be necessary to identify and address seasonality and trends in order to identify the impact of covid on the counted people.
+
+\newpage
+
+# References
+
+## Data Sources
+Roser, M., Ritchie, H., Ortiz-Ospina, E., & Hasell, J. (2020). Coronavirus Pandemic (COVID-19). Our World in Data. [<https://ourworldindata.org/coronavirus/country/switzerland>](https://ourworldindata.org/coronavirus/country/switzerland){.uri} (accessed 20.02.2021).
+
+Stadt Zürich. (2021). Open Data Zürich. <https://data.stadt-zuerich.ch/> (accessed 10.02.2021).
+
+Swiss Tourism Federation. (2021). Chronik Coronavirus. [<https://www.stv-fst.ch/de/chronik-coronavirus>](https://www.stv-fst.ch/de/chronik-coronavirus){.uri} (accessed 12.02.2021).
+
+Widmer, P., & Robin, P. (2021). Zurich_walks_video. HSLU Bootcamp. https://vimeo.com/516652769 (accessed 25.02.2021)
+
+## Used R-Packages
+
+```{r biblio_packages, include=FALSE}
+
+used_packages <- names(sessionInfo()$otherPkgs)
+knitr::write_bib(used_packages, file = './Sources/packages.bib')
+```
+
