@@ -9,7 +9,7 @@ All the relevant data are in the Widmer_Robin.zip folder:
 - The newly learned or used functions are saved in the Cheatsheet_bootcamp.xlsx file.
 
 - All the used data is saved in the Data subfolder.
-- The created animation zurich_walks_video.avi is in the Video folder.
+- The created animation Zurich_Walks_Animation.avi is in the Video folder.
 - The pngs that are used are in the png_output subfolder within the Video folder.
 
 When running the zurich_walks.rmd file, some additional summaries and plots are created that are not included in the knitted html file.
