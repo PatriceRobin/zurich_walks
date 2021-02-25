@@ -528,7 +528,7 @@ knitr::kable(table.zones[0:2],
 ```
 
 <!-- Creatre one dataframe with all the information -->
-q
+
 ```{r zwalks.difference}
 # join everything into one table
 zwalks.day.knr <- zwalks.day %>% left_join (dplyr::select(zstation.zones,
@@ -551,7 +551,21 @@ zwalks.week.zones <- zwalks.week.zones %>%
               values_from = people_sum)
 
 # calculate the difference between the 2020 and 2019
-zwalks.week.zones["difference_people"] <- zwalks.week.zones['2020'] - zwalks.week.zones['2019'] 
+zwalks.week.zones["difference_people"] <- zwalks.week.zones['2020'] - zwalks.week.zones['2019']
+
+
+
+#pivot wide table -- week knr
+zwalks.week.knr <- zwalks.day.knr %>%
+  group_by(year, week, knr) %>%
+  summarize(people_sum = sum(people_all))
+
+
+zwalks.week.knr <- zwalks.week.knr %>%
+  pivot_wider(names_from = year,
+              values_from = people_sum)
+
+zwalks.week.knr["difference_people"] <- zwalks.week.knr['2020'] - zwalks.week.knr['2019'] 
 ```
 
 As shown in the five plots below, the pandemic had a different impact on the different zones. Recreational zones and industrial zones counted higher numbers of people while Empty/Parking zones and Living zones where less frequently visited by people on foot or bicycle.
@@ -599,13 +613,13 @@ In a second pair of plots, we only subtract the counted people in 2019 from the 
 
 In a last step, we decided to animate the difference in pedestrians and cyclists counted in 2020 compared to 2019 across time. For each month of 2020, we generate a color coded map. Dark green areas show that fewer pedestrians and bicyclists were counted compared to the previous year.In contrast, dark red areas show that more pedestrians and bicyclists where counted.  This plot is combined with a second graph showing the number of COVID cases counted. If you look at zwalks_animation.avi, you can see how the COVID pandemic unfolds and how the number of pedestrians decreases as COVID cases rise.  
 
-```{r plot_video, results="markup", fig.width = 10, fig.height = 4}
+```{r create_video, fig.show='hide'}
 # -------------------------- animated video --------------------------
 
 # create new directory & subdirectory
-ifelse(!dir.exists(file.path("../png_output/")), {dir.create(file.path("../png_output/")); "Directory created"}, "Directory already exists")
-ifelse(!dir.exists(file.path("../png_output/zwalks_week")), {dir.create(file.path("../png_output/zwalks_week")); "Subdirectory created"}, "Subirectory already exists")
-png_output_path = "../png_output/zwalks_week/"
+ifelse(!dir.exists(file.path("./Video/")), {dir.create(file.path("./Video/")); "Directory created"}, "Directory already exists")
+ifelse(!dir.exists(file.path("./Video/png_output/")), {dir.create(file.path("./Video/png_output/")); "Subdirectory created"}, "Subirectory already exists")
+png_output_path = "./Video/png_output/"
 
 
 # -------------------------- prapare plot --------------------------
@@ -625,7 +639,7 @@ summary(zstation)
 empty_kreis_color = "grey75"
 missing_percentile_color = "grey75"
 basic_color = "lightblue"
-png_output_path = "../png_output/"
+png_output_path = "./Video/png_output/"
 zkreis$color <- basic_color
 
 
@@ -766,11 +780,7 @@ for (i_week in 1:53){
 }
 
 
-
-
-#############################################################################
-# Create Video
-#############################################################################
+# -------------------------- create video --------------------------
 
 
 file_name<- list.files(path=png_output_path)
@@ -790,13 +800,8 @@ for (i in 1:nrow(file_list)){
 file_list_sorted <- arrange(file_list, sort_index)
 file_list_sorted
 
-av::av_encode_video(file_list_sorted$file_path, 'zwalks_animation.avi', framerate = 2)
+av::av_encode_video(file_list_sorted$file_path, './Video/zurich_walks_video.avi', framerate = 2)
 
-
-# create new directory & subdirectory
-ifelse(!dir.exists(file.path("../png_output/")), {dir.create(file.path("../png_output/")); "Directory created"}, "Directory already exists")
-ifelse(!dir.exists(file.path("../png_output/zwalks_week")), {dir.create(file.path("../png_output/zwalks_week")); "Subdirectory created"}, "Subirectory already exists")
-png_output_path = "../png_output/zwalks_week"
 
 ```
 
